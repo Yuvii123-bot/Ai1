@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import handler from '../api/self-test.js';
+import handler from '../experiments/vercel-cpu-qwen/self-test.js';
 const makeRes = () => ({ setHeader() {}, status(code) { this.code = code; return this; }, json(body) { this.body = body; return this; } });
 test('the experiment is inaccessible without its configured test secret', async () => {
   delete process.env.AI1_SELF_TEST_SECRET;

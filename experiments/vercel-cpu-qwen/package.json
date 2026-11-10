@@ -1,0 +1,8 @@
+{
+  "name": "ai1-vercel-cpu-qwen-experiment",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "node-llama-cpp": "3.22.3"
+  }
+}

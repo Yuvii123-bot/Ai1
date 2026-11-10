@@ -1,0 +1,11 @@
+# Vercel CPU Qwen experiment
+
+This is a fixed-prompt feasibility test, **not the chat backend**. On 2026-11-10, a temporary Vercel Hobby deployment ran `Qwen2.5-0.5B-Instruct Q4_K_M` using `node-llama-cpp` 3.22.2 (one CPU thread). The test returned “2 plus 2 equals 4” in 11.5 seconds total, including 8.4 seconds to download/load the approximately 398 MB model. This is a single cold test; performance, model availability, and usage limits can vary. The regular chat remains on OVHcloud.
+
+The function and temporary access secret have been removed from the production deployment after testing. The code here is retained as an experiment, not automatically deployed. It uses a fixed prompt and never accepts user chat messages. Before turning this into a public chat, add robust authentication and distributed limits: a public model endpoint can exhaust the shared Vercel Hobby CPU quota. An access secret in a URL can leak via logs and is not an appropriate production authentication scheme.
+
+The experiment downloads model weights from Hugging Face to ephemeral `/tmp`, validates their SHA-256, and runs inference inside Vercel; it does not use a remote inference provider. Cold instances may need to download the model again. Qwen 0.5B is much less capable than the currently hosted Qwen 3.5 9B. Vercel Hobby limits include 2 GB RAM / 1 vCPU per function and 4 CPU-hours per month, shared with other usage. Vercel and Hugging Face remain infrastructure dependencies. Consult their current terms and limits.
+
+The tested temporary deployment used `self-test.js` as `api/self-test.js`, `node-llama-cpp` as a root dependency, a build-time prune step to keep only the Linux x64 CPU native binding, and Vercel `includeFiles` for that binding. The retained dependency specification has since been updated to 3.22.3 to fix npm advisories; **that updated version has not been tested on Vercel**. Do not enable the test on an unprotected public deployment or reuse its temporary secret.
+
+Model: [bartowski/Qwen2.5-0.5B-Instruct-GGUF](https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF), based on Qwen2.5, with its own model license. Native runtime: [node-llama-cpp](https://github.com/withcatai/node-llama-cpp).

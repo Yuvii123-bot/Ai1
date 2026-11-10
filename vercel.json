@@ -1,12 +1,5 @@
 {
   "framework": "vite",
-  "installCommand": "npm ci --ignore-scripts --no-audit --no-fund && node scripts/prune-llama.mjs",
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "functions": {
-    "api/self-test.js": {
-      "maxDuration": 300,
-      "includeFiles": "{node_modules/node-llama-cpp/**,node_modules/@node-llama-cpp/linux-x64/**}"
-    }
-  }
+  "outputDirectory": "dist"
 }
