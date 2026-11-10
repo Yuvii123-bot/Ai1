@@ -91,8 +91,8 @@ export default function VoicePage() {
     stop();
     const ctx = new AudioContext();
     const buf = ctx.createBuffer(2, out.L.length, out.sampleRate);
-    buf.copyToChannel(out.L, 0);
-    buf.copyToChannel(out.R, 1);
+    buf.getChannelData(0).set(out.L);
+    buf.getChannelData(1).set(out.R);
     const src = ctx.createBufferSource();
     src.buffer = buf;
     const gain = ctx.createGain();

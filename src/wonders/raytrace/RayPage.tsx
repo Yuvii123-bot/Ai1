@@ -65,7 +65,7 @@ export default function RayPage() {
     const ctx = canvas.getContext('2d')!;
     const img = tonemap(accum, Math.max(1, totalSamples), exposure);
     if (denoiseOn && totalSamples < 40) denoise(img, w, h, totalSamples < 4 ? 0.85 : 0.5);
-    const id = new ImageData(new Uint8ClampedArray(img), w, h);
+    const id = new ImageData(new Uint8ClampedArray(img) as any, w, h);
     ctx.putImageData(id, 0, 0);
   }, [exposure, denoiseOn, totalSamples]);
 
