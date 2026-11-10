@@ -42,7 +42,7 @@ const EXHIBITS = [
     n: "VII", slug: "decoder", room: "exhibits/05-decoder/index.html",
     title: "Rosetta",
     glyph: "📜", tag: "language",
-    blurb: "56 languages, 1,120 real translations, no labels. The machine rediscovers the family tree from the sound of the words — 100% purity."
+    blurb: "56 languages, 1,120 real translations, no labels. The machine rediscovers the family tree from the sound of the words — 97% pure on the groups it forms."
   },
   {
     n: "VIII", slug: "leak", room: "exhibits/02-leak/index.html",
@@ -136,24 +136,27 @@ window.addEventListener("load", () => {
   if (slug && EXHIBITS.some(e => e.slug === slug)) open(slug);
 });
 
-/* ---------- playful stat: rough LOC count ---------- */
-fetch("assets/app.js").then(r => r.text()).then(() => {}).catch(() => {});
+/* ---------- the honest stat: count every line we actually shipped ---------- */
 (async () => {
+  const el = document.getElementById("locCount");
+  if (!el) return;
   try {
+    const files = [
+      "index.html", "assets/style.css", "assets/app.js",
+      ...EXHIBITS.map(e => e.room),
+    ];
     let total = 0;
-    const files = ["assets/style.css", "assets/app.js", "index.html"];
     for (const f of files) {
-      const t = await fetch(f).then(r => r.text());
-      total += t.split("\n").length;
+      const t = await fetch(f).then(r => r.ok ? r.text() : "");
+      total += t ? t.split("\n").length : 0;
     }
-    const el = document.getElementById("locCount");
-    let cur = 0, target = total;
+    let cur = 0;
     const step = () => {
-      cur += Math.max(1, Math.ceil((target - cur) / 14));
-      if (cur >= target) { el.textContent = target.toLocaleString() + "+"; return; }
+      cur += Math.max(1, Math.ceil((total - cur) / 14));
+      if (cur >= total) { el.textContent = total.toLocaleString(); return; }
       el.textContent = cur.toLocaleString();
       requestAnimationFrame(step);
     };
     step();
-  } catch (e) {}
+  } catch (e) { el.textContent = "—"; }
 })();
