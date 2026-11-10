@@ -1,0 +1,12 @@
+{
+  "name": "cabinet-of-ten-wonders",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Ten working pieces of software, built in a single sitting. Static, dependency-free.",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "python3 -m http.server 8080 --bind 0.0.0.0"
+  },
+  "keywords": ["static", "canvas", "simulation", "devanagari", "vercel"],
+  "license": "MIT"
+}
