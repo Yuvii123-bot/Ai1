@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Leak Detector — what your paste gives away</title>
+<style>
+:root{--bg:#07080d;--paper:#efe9dd;--dim:#8b8778;--brass:#c9a86a;--brass-hi:#e8cf9a;
+--red:#d8776a;--amber:#e0b470;--green:#8fc09a;
+--line:rgba(201,168,106,.16);--mono:"JetBrains Mono",ui-monospace,monospace;
+--sans:"Inter",-apple-system,"Segoe UI",sans-serif;--serif:"Cormorant Garamond",Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--paper);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
+background:radial-gradient(80% 60% at 50% -10%,rgba(201,168,106,.07),transparent 60%),
+radial-gradient(60% 50% at 90% 100%,rgba(120,140,200,.05),transparent 60%)}
+main{max-width:1100px;margin:0 auto;padding:0 24px 70px}
+
+header{padding:clamp(44px,9vh,80px) 0 30px}
+.eyebrow{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--brass-dim);margin-bottom:20px}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(34px,6vw,60px);line-height:1;letter-spacing:-.02em}
+h1 em{font-style:italic;color:var(--brass-hi)}
+.lede{max-width:640px;margin-top:20px;font-size:13.5px;line-height:1.8;color:#a8a294}
+.lede b{color:#d8cfbc;font-weight:500}
+
+.panel{background:linear-gradient(165deg,rgba(18,21,29,.9),rgba(9,11,16,.95));
+border:1px solid var(--line);border-radius:5px;padding:clamp(18px,3vw,26px);margin-top:30px;
+box-shadow:0 30px 80px -50px #000}
+.panel h2{font-size:9px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);margin-bottom:13px;
+display:flex;justify-content:space-between;align-items:center;gap:10px}
+textarea{width:100%;min-height:200px;background:rgba(0,0,0,.32);border:1px solid var(--line);
+color:var(--paper);font-family:var(--mono);font-size:12px;line-height:1.75;padding:15px;
+border-radius:4px;outline:none;resize:vertical;transition:.3s}
+textarea:focus{border-color:rgba(201,168,106,.45);box-shadow:0 0 0 3px rgba(201,168,106,.05)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px;align-items:center}
+button{background:rgba(201,168,106,.08);border:1px solid var(--line);color:var(--brass-hi);
+padding:9px 16px;border-radius:3px;font-family:var(--sans);font-size:9.5px;letter-spacing:.16em;
+text-transform:uppercase;cursor:pointer;transition:.3s}
+button:hover{background:rgba(201,168,106,.18);border-color:rgba(201,168,106,.42)}
+button.ghost{color:var(--dim)}
+.privacy{margin-left:auto;font-size:9.5px;color:#6b6862;letter-spacing:.06em;display:flex;align-items:center;gap:7px}
+.privacy .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+
+/* gauge */
+#gauge{display:flex;align-items:center;gap:26px;margin-top:28px;flex-wrap:wrap}
+.score{font-family:var(--serif);font-size:62px;line-height:.9;font-weight:300;letter-spacing:-.03em}
+.score small{font-size:16px;color:var(--dim);letter-spacing:0}
+.verdict{flex:1;min-width:200px}
+.verdict .v{font-family:var(--serif);font-size:21px;color:var(--brass-hi);line-height:1.25}
+.verdict .s{font-size:11.5px;color:var(--dim);margin-top:7px;line-height:1.7}
+.track{height:4px;border-radius:4px;background:rgba(255,255,255,.06);margin-top:18px;overflow:hidden}
+.track i{display:block;height:100%;width:0;border-radius:4px;transition:width 1s cubic-bezier(.16,1,.3,1)}
+
+/* findings */
+#findings{margin-top:26px;display:grid;gap:9px}
+.f{display:grid;grid-template-columns:26px 1fr auto;gap:13px;align-items:start;
+background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.05);border-left:2px solid var(--c,#c9a86a);
+border-radius:3px;padding:13px 15px;animation:fadeup .5s both}
+@keyframes fadeup{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.f .ico{font-size:14px;line-height:1.2;filter:grayscale(.3)}
+.f .what{font-size:12px;line-height:1.55;color:var(--paper)}
+.f .what b{color:var(--c,#c9a86a);font-weight:500}
+.f .what .hint{display:block;font-size:10.5px;color:#7e7a70;margin-top:4px;line-height:1.6}
+.f .sev{font-size:8px;letter-spacing:.14em;text-transform:uppercase;padding:3px 7px;border-radius:100px;
+border:1px solid var(--c);color:var(--c);white-space:nowrap;opacity:.85}
+.f .val{font-family:var(--mono);font-size:10.5px;color:var(--c);margin-top:5px;word-break:break-all;
+background:rgba(0,0,0,.3);padding:4px 7px;border-radius:2px;display:inline-block}
+
+/* the stalker panel */
+#stalker{margin-top:30px;display:none}
+#stalker.on{display:block}
+.recon{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:14px}
+.rc{background:rgba(216,119,106,.06);border:1px solid rgba(216,119,106,.2);border-radius:3px;padding:11px 13px}
+.rc .k{font-size:8px;letter-spacing:.18em;text-transform:uppercase;color:#a08078;margin-bottom:5px}
+.rc .v{font-size:11.5px;color:#e0cfc8;line-height:1.5}
+
+/* sample buttons */
+.samples{margin-top:20px}
+.samples .lbl{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:#6b6862;margin-bottom:9px}
+.samples .row{margin-top:0}
+.samples button{font-size:9px;padding:7px 12px;text-transform:none;letter-spacing:.02em;color:var(--dim)}
+.hide{display:none!important}
+footer{margin-top:50px;padding-top:24px;border-top:1px solid var(--line);font-size:10px;color:#5f5c55;
+line-height:1.9;letter-spacing:.03em}
+footer b{color:var(--brass-dim);font-weight:400}
+
+/* --- collection navigator --- */
+#cabnav{position:fixed;left:0;right:0;bottom:0;z-index:8000;display:flex;align-items:center;
+justify-content:center;gap:5px;padding:7px 12px;background:rgba(7,8,13,.82);
+border-top:1px solid rgba(201,168,106,.13);backdrop-filter:blur(14px);
+font-family:"Inter",-apple-system,sans-serif;transform:translateY(105%);
+transition:transform .45s cubic-bezier(.16,1,.3,1)}
+#cabnav.show{transform:none}
+#cabnav a{font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:#6f6a60;
+text-decoration:none;padding:5px 8px;border-radius:3px;transition:.25s;white-space:nowrap}
+#cabnav a:hover{color:#e8cf9a;background:rgba(201,168,106,.13)}
+#cabnav a.cur{color:#c9a86a;background:rgba(201,168,106,.1)}
+#cabnav .home{color:#c9a86a;border-right:1px solid rgba(201,168,106,.18);margin-right:4px;padding-right:12px}
+@media(max-width:620px){#cabnav a{font-size:7px;padding:4px 4px;letter-spacing:.04em}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<main>
+  <header>
+    <div class="eyebrow">Exhibit VIII · personal data exposure audit</div>
+    <h1>The Leak <em>Detector</em></h1>
+    <p class="lede">
+      Paste a CV, a chat log, a photo caption, a job application — anything you were
+      about to put on the internet. The machine tells you <b>what it can work out about
+      you</b> that you did not write down, and how a stranger would use it.
+      Everything happens in this tab. Nothing is sent anywhere.
+    </p>
+  </header>
+
+  <section class="panel">
+    <h2><span>Paste something you were about to post</span><span id="cnt">&nbsp;</span></h2>
+    <textarea id="text" spellcheck="false" placeholder="Paste text here — a CV, a message, a bio, a caption, an email signature…"></textarea>
+    <div class="row">
+      <button id="go">Analyse it</button>
+      <button id="clear" class="ghost">Clear</button>
+      <span class="privacy"><span class="dot"></span> runs locally · nothing leaves this tab</span>
+    </div>
+    <div class="samples">
+      <div class="lbl">or try a sample</div>
+      <div class="row" id="samples"></div>
+    </div>
+  </section>
+
+  <section class="panel hide" id="result">
+    <div id="gauge">
+      <div class="score" id="score">0<small>/100</small></div>
+      <div class="verdict">
+        <div class="v" id="vtitle">—</div>
+        <div class="s" id="vsub">—</div>
+        <div class="track"><i id="vbar"></i></div>
+      </div>
+    </div>
+    <div id="findings"></div>
+  </section>
+
+  <section class="panel" id="stalker">
+    <h2><span>What a stranger could assemble</span></h2>
+    <div class="recon" id="recon"></div>
+  </section>
+
+  <footer>
+    <b>HOW IT WORKS</b> — pattern analysis of the text you paste, plus
+    inference: age from a date of birth, employer from an email domain, city from a
+    postcode, health from a sentence. No network calls, no storage, no telemetry.
+    Close the tab and it is gone.
+  </footer>
+</main>
+
+<script>
+/* ============================================================
+   THE LEAK DETECTOR
+   Pure client-side inference. Every finding must point at the
+   exact substring it came from, so nothing is guessed silently.
+   ============================================================ */
+const $ = s => document.querySelector(s);
+const textEl = $('#text');
+
+/* ---------- detectors ---------- */
+const RULES = [
+  { id:'email', sev:'high', icon:'✉', label:'Email address',
+    rx:/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, w:14,
+    hint:'A permanent, unique identifier. It is the single most reused key in every breach dump.',
+    use:'Stalkers use it to find you on other sites; spammers sell it in bulk.' },
+  { id:'phone', sev:'high', icon:'☎', label:'Phone number',
+    rx:/(?:\+?977[\s-]?)?(?:9[6-8]\d|98\d)[\s-]?\d{3}[\s-]?\d{4}\b|\+\d{1,3}[\s-]?\(?\d{2,4}\)?[\s-]?\d{3,4}[\s-]?\d{3,4}/g, w:13,
+    hint:'Maps directly to a SIM identity and, in many countries, a real address.',
+    use:'Two-factor codes, SIM swaps, and a straight line to your voicemail.' },
+  { id:'nid', sev:'critical', icon:'🪪', label:'National ID / citizenship number',
+    rx:/\b\d{2}-\d{2}-\d{2}-\d{5}\b|\b\d{3}-\d{2}-\d{4}\b/g, w:25,
+    hint:'A permanent government identifier. Cannot be changed if leaked.',
+    use:'Identity fraud, loan applications, and account takeover.' },
+  { id:'pan', sev:'critical', icon:'💳', label:'Tax or payment identifier',
+    rx:/\b\d{5}[-\s]?\d{4}[-\s]?[A-Z]\b|\b[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4}[\s-]?[0-9]{4}\b/g, w:28,
+    hint:'Strong financial identifier. Pairs with a name and a date of birth.',
+    use:'Card testing, tax refund fraud.' },
+  { id:'dob', sev:'medium', icon:'🎂', label:'Date of birth',
+    rx:/\b(?:0?[1-9]|[12]\d|3[01])[\/.\-](?:0?[1-9]|1[0-2])[\/.\-](?:19|20)?\d{2}\b|\b(?:19|20)\d{2}[\/.\-](?:0?[1-9]|1[0-2])[\/.\-](?:0?[1-9]|[12]\d|3[01])\b/g, w:11,
+    hint:'Combined with a name and a postcode this is enough to open credit in many countries.',
+    use:'Identity theft; it is one of the three pieces credit checks ask for.' },
+  { id:'address', sev:'high', icon:'🏠', label:'Home address or postcode',
+    rx:/\b(?:Ward|Tole|Marg|Road|Street|Ave|Avenue|Lane|Galli)\s*[-–]?\s*\d+[\w ]{0,24}|\b\d{5}\b(?=\s*,\s*[A-Z])/gi, w:12,
+    hint:'Precise location, usually enough to find the building.',
+    use:'Doxxing, home visits, targeted scams.' },
+  { id:'employer', sev:'medium', icon:'🏢', label:'Employer or institution',
+    rx:/\b(?:works? at|working at|employed (?:by|at)|@)([A-Z][A-Za-z&.\- ]{2,32}?)(?=[\s,.;]|$)/g, w:7,
+    hint:'Reveals where you physically are during office hours.',
+    use:'Targeted phishing from fake recruiters; social engineering at the front desk.' },
+  { id:'child', sev:'high', icon:'👶', label:'A child, or a child\u2019s school',
+    rx:/\b(?:my (?:son|daughter)|(?:school|class) (?:of|\d))[^.!?\n]{0,60}/gi, w:14,
+    hint:'Details about minors are the highest-harm category on most platforms.',
+    use:'Grooming risk, and it permanently links a real name to a minor.' },
+  { id:'health', sev:'high', icon:'💊', label:'Health information',
+    rx:/\b(diabetes|arthrit\w+|cancer|depress\w+|anxiety|ADHD|bipolar|asthma|HIV|pregnan\w+|therapy|medication|diagnos\w+|disabilit\w+|visually impaired)\b/gi, w:15,
+    hint:'Sensitive by law in most jurisdictions, and permanently quotable by an insurer.',
+    use:'Insurance pricing, employment discrimination.' },
+  { id:'gps', sev:'medium', icon:'📍', label:'Location pattern',
+    rx:/\b(?:every|each) (?:morning|evening|day|week)[^.!?\n]{0,50}|\bI (?:live|stay) (?:in|near) [A-Z][a-z]+/g, w:8,
+    hint:'A routine is more dangerous than a point: it tells someone when you are not home.',
+    use:'Burglary timing, physical following.' },
+  { id:'money', sev:'low', icon:'💰', label:'Financial detail',
+    rx:/\b(?:salary|earn|earning|paid|rent|loan|debt|savings?)\s*(?:of|is|:)?\s*(?:NRs?|Rs\.?|\$|USD|€|£)?\s?[\d,]{3,}/gi, w:6,
+    hint:'Motivation for targeted extortion or a very convincing scam.',
+    use:'Fraud, predatory lending.' },
+  { id:'handle', sev:'low', icon:'@', label:'Reused social handle',
+    rx:/(?:^|\s)@[A-Za-z0-9_.]{3,24}\b/g, w:5,
+    hint:'The same handle across sites ties all your accounts into one profile.',
+    use:'Cross-platform profiling in minutes.' },
+  { id:'employer2', sev:'low', icon:'📄', label:'Document metadata in paste',
+    rx:/\b(?:Confidential|Internal use|Draft|Do not distribute)\b/gi, w:4,
+    hint:'A marker that this document was not meant to be public.',
+    use:'Evidence you leaked it.' },
+  { id:'face', sev:'low', icon:'🖼', label:'Image reference',
+    rx:/\b(?:photo|selfie|picture) of (?:me|my [a-z]+)/gi, w:3,
+    hint:'Images carry their own metadata unless stripped. Check before posting.',
+    use:'Facial recognition and reverse image search.' },
+];
+
+/* softened: "employer" regex is too noisy; we filter below by plausibility */
+function findCity(t){
+  const CITIES=['Kathmandu','Pokhara','Lalitpur','Bhaktapur','Biratnagar','Dharan','Butwal','Chitwan',
+    'Delhi','Mumbai','Bangalore','Bengaluru','London','Manchester','New York','Brooklyn','Austin',
+    'Berlin','Paris','Tokyo','Singapore','Sydney','Toronto','Dubai','Riyadh','Kolkata'];
+  return CITIES.filter(c => new RegExp('\\b'+c+'\\b','i').test(t));
+}
+
+function inferAge(t){
+  const m = t.match(/\b(?:born|b\.?)[^\d]{0,10}(19\d{2}|20\d{2})\b/i);
+  if(m) return { age: 2026 - +m[1], src:m[0] };
+  const m2 = t.match(/\b(\d{2})\s*(?:years old|y\/o|yo)\b/i);
+  if(m2) return { age:+m2[1], src:m2[0] };
+  /* never infer the author's age from a child's school year — that is
+     the most common way automated tools get this wrong */
+  const m3 = t.match(/\b(?:I(?:'m| am)|my age is)\s*(\d{2})\b/i);
+  if(m3) return { age:+m3[1], src:m3[0] };
+  return null;
+}
+
+function inferTech(t){
+  const T = {
+    'iPhone':/iphone/i, 'Android':/android|pixel \d|xiaomi|redmi|samsung/i,
+    'Windows':/windows|\.exe|C:\\\\/i, 'macOS':/macbook|macos|\.dmg/i,
+    'WhatsApp':/whatsapp/i, 'Instagram':/instagram|insta\b|ig\b/i,
+    'Telegram':/telegram/i, 'Gmail':/gmail/i, 'Outlook':/outlook|hotmail/i,
+  };
+  return Object.entries(T).filter(([k,rx])=>rx.test(t)).map(([k])=>k);
+}
+
+function inferTimezone(t){
+  const r = [];
+  if(/\b(?:NPT|Nepal|Kathmandu|Pokhara)\b/i.test(t)) r.push('Asia/Kathmandu (UTC+5:45)');
+  if(/\b(?:IST|India|Delhi|Mumbai)\b/i.test(t)) r.push('Asia/Kolkata (UTC+5:30)');
+  if(/\b(?:GMT|London|UK)\b/i.test(t)) r.push('Europe/London');
+  if(/\b(?:EST|EDT|New York|NYC)\b/i.test(t)) r.push('America/New_York');
+  return r;
+}
+
+/* ---------- run ---------- */
+let lastScore = 0;
+
+function analyse(){
+  const t = textEl.value;
+  const found = [];
+  if(t.trim().length < 8){
+    $('#result').classList.add('hide');
+    $('#stalker').classList.remove('on');
+    return;
+  }
+
+  for(const r of RULES){
+    const rx = new RegExp(r.rx.source, r.rx.flags.includes('g') ? r.rx.flags : r.rx.flags+'g');
+    const hits = [...new Set((t.match(rx)||[]).map(s=>s.trim()))].filter(Boolean).slice(0,3);
+    if(!hits.length) continue;
+    if(r.id === 'employer' && hits.every(h=>/^@[\w.-]+\.(com|org|net|np|io|co)$/i.test(h))) continue;
+    found.push({ ...r, hits });
+  }
+
+  const cities = findCity(t);
+  if(cities.length) found.push({
+    id:'city', sev:'medium', icon:'🌐', label:'City identified', hits:cities, w:9,
+    hint:'Enough to narrow you to a neighbourhood when combined with anything else here.',
+    use:'Localised scams, physical proximity.'
+  });
+
+  const tech = inferTech(t);
+  if(tech.length >= 2) found.push({
+    id:'tech', sev:'low', icon:'📱', label:'Device and platform fingerprint', hits:[tech.join(', ')], w:5,
+    hint:'Which phone, which apps. This is how an attacker picks the right exploit.',
+    use:'Choosing the attack that fits your device.'
+  });
+
+  const age = inferAge(t);
+  if(age && age.age > 4 && age.age < 110) found.push({
+    id:'age', sev:'medium', icon:'📅', label:`Age inferable: about ${age.age}`, hits:[age.src], w:8,
+    hint:'You never wrote your age, but the text gave it away.',
+    use:'Age-targeted fraud, and the third piece of a credit identity.'
+  });
+
+  /* score: weighted, with diminishing returns */
+  let raw = 0;
+  for(const f of found) raw += f.w;
+  const score = Math.min(100, Math.round(100*(1 - Math.exp(-raw/42))));
+
+  /* ---- render gauge ---- */
+  const band = score>=70 ? {c:'#d8776a',t:'This should not be posted.',
+      s:'There is enough here for someone to impersonate you, find you, or both.'}
+    : score>=40 ? {c:'#e0b470',t:'This is riskier than it looks.',
+      s:'Several small details combine into a profile. Remove the unnecessary ones.'}
+    : score>=15 ? {c:'#c9a86a',t:'Mostly safe — with a few loose threads.',
+      s:'Trim the details that are not needed for what you are trying to say.'}
+    : {c:'#8fc09a',t:'Almost nothing given away.',
+      s:'No strong identifiers found. This is what a careful post looks like.'};
+
+  $('#result').classList.remove('hide');
+  $('#score').innerHTML = score + '<small>/100</small>';
+  $('#score').style.color = band.c;
+  $('#vtitle').textContent = band.t;
+  $('#vtitle').style.color = band.c;
+  $('#vsub').textContent = band.s;
+  const bar = $('#vbar');
+  bar.style.background = band.c;
+  bar.style.width = '0%';
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{ bar.style.width = score+'%'; }); });
+
+  /* ---- findings ---- */
+  const sevColour = {critical:'#d8776a', high:'#d8776a', medium:'#e0b470', low:'#c9a86a'};
+  const order = {critical:0,high:1,medium:2,low:3};
+  found.sort((a,b)=>order[a.sev]-order[b.sev]);
+
+  $('#findings').innerHTML = found.length ? found.map((f,i)=>`
+    <div class="f" style="--c:${sevColour[f.sev]};animation-delay:${i*45}ms">
+      <div class="ico">${f.icon}</div>
+      <div class="what">
+        <b>${f.label}</b>
+        <span class="val">${escapeHtml(f.hits[0].slice(0,60))}</span>
+        <span class="hint">${f.hint} <em style="color:#8f8b81;font-style:normal">${f.use}</em></span>
+      </div>
+      <div class="sev">${f.sev}</div>
+    </div>`).join('')
+    : `<div class="f" style="--c:#8fc09a"><div class="ico">✓</div>
+       <div class="what"><b>Nothing significant found.</b>
+       <span class="hint">No emails, numbers, identity documents, dates of birth or health disclosures.</span></div>
+       <div class="sev" style="border-color:#8fc09a;color:#8fc09a">clean</div></div>`;
+
+  /* ---- the stalker panel ---- */
+  const bits = [];
+  if(cities.length) bits.push({k:'Where you probably are', v:cities.join(' / ')});
+  if(tech.length) bits.push({k:'What you use', v:tech.join(' · ')});
+  const routine = t.match(/\b[^.!?\n]{0,40}(?:every morning|every day|every evening|nobody home)[^.!?\n]{0,60}/i);
+  if(routine) bits.push({k:'When your home is empty', v:routine[0].trim()});
+  const tz = inferTimezone(t);
+  if(tz.length) bits.push({k:'When you are awake', v:tz.join(' · ')});
+  if(age && age.age) bits.push({k:'Roughly how old', v:`about ${age.age}`});
+  const email = (t.match(/\b[A-Z0-9._%+-]+@([A-Z0-9.-]+\.[A-Z]{2,})\b/i)||[])[1];
+  if(email) bits.push({k:'Which organisation', v:email});
+  const handles = [...new Set(t.match(/@[A-Za-z0-9_.]{3,24}\b/g)||[])];
+  if(handles.length) bits.push({k:'Search these to find the rest of them', v:handles.join(', ')});
+  if(age && age.age) bits.push({k:'Inferred birth year', v:String(2026-age.age)});
+  const health = found.find(f=>f.id==='health');
+  if(health) bits.push({k:'A vulnerability to mention in a scam', v:health.hits[0]});
+  const docs = found.filter(f=>f.sev==='critical');
+  if(docs.length) bits.push({k:'Documents to impersonate you with', v:docs.map(d=>d.hits[0]).join(' · ')});
+
+  if(bits.length){
+    $('#stalker').classList.add('on');
+    $('#recon').innerHTML = bits.map(b=>
+      `<div class="rc"><div class="k">${b.k}</div><div class="v">${escapeHtml(b.v).slice(0,140)}</div></div>`).join('');
+  } else {
+    $('#stalker').classList.remove('on');
+  }
+
+  lastScore = score;
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- samples ---------- */
+const SAMPLES = {
+  'A careless CV': `Curriculum Vitae
+Name: Anisha Sharma
+Date of birth: 14/03/1998
+Address: Ward 12, Jhamsikhel, Lalitpur
+Phone: +977 9841234567
+Email: anisha.sharma@gmail.com
+Citizenship No: 27-01-70-01234
+Currently working at Himalayan Tech Ventures as a junior analyst.
+I have type 2 diabetes and need flexible hours.
+Salary expectation: NRs 85,000`,
+  'A harmless-looking post': `Finally moved into the new flat on Ward 12, Boudha! 🏠
+My son starts at grade 4 next week, so mornings are chaos.
+Every morning I drop him at school, then the gym, then the office in Thamel.
+Nobody home between 8 and 6 most days 😅
+Reply on @anisha.sh or anisha.s@company.com.np`,
+  'A support message': `hi, I'm on Windows 11, my laptop is a Dell, and I use
+WhatsApp for work + Instagram for personal. My account is
+9843-556677. Born in 1992. I have anxiety and take medication.
+I live in Kathmandu near the ring road.`,
+  'A careful post': `Took the long way home today. The light was extraordinary and
+I stopped to watch the river for twenty minutes. Nothing else to report.`
+};
+
+const samplesEl = $('#samples');
+Object.keys(SAMPLES).forEach(k=>{
+  const b = document.createElement('button');
+  b.textContent = k;
+  b.onclick = () => { textEl.value = SAMPLES[k]; analyse(); textEl.focus();
+    document.querySelector('#result').scrollIntoView({behavior:'smooth', block:'start'}); };
+  samplesEl.appendChild(b);
+});
+
+/* ---------- wiring ---------- */
+let deb;
+textEl.addEventListener('input', ()=>{
+  $('#cnt').textContent = textEl.value.length ? textEl.value.length+' chars' : '\u00A0';
+  clearTimeout(deb);
+  deb = setTimeout(analyse, 320);
+});
+$('#go').onclick = analyse;
+$('#clear').onclick = ()=>{
+  textEl.value=''; $('#result').classList.add('hide'); $('#stalker').classList.remove('on');
+  $('#cnt').innerHTML='&nbsp;'; textEl.focus();
+};
+
+/* live demo on load */
+textEl.value = SAMPLES['A harmless-looking post'];
+$('#cnt').textContent = textEl.value.length+' chars';
+setTimeout(analyse, 500);
+</script>
+<div id="cabnav"><a class="home" href="../../index.html">The Cabinet</a><a href="../10-orrery/index.html">I</a><a href="../03-truesize/index.html">II</a><a href="../07-darkforest/index.html">III</a><a href="../04-lifeseed/index.html">IV</a><a href="../01-nepal/index.html">V</a><a href="../06-cartographer/index.html">VI</a><a href="../05-decoder/index.html">VII</a><a href="../02-leak/index.html" class="cur">VIII</a><a href="../08-meter/index.html">IX</a><a href="../09-cabinet/index.html">X</a></div>
+
+<script>
+/* collection navigator — appears on hover near the bottom edge */
+(function(){
+  var n = document.getElementById('cabnav');
+  if(!n) return;
+  var t;
+  function reveal(){ n.classList.add('show'); clearTimeout(t);
+    t = setTimeout(function(){ n.classList.remove('show'); }, 2600); }
+  document.addEventListener('mousemove', function(e){
+    if(e.clientY > innerHeight - 70) reveal();
+  });
+  window.addEventListener('touchstart', function(e){
+    if(e.touches[0].clientY > innerHeight - 90) reveal();
+  }, {passive:true});
+  setTimeout(reveal, 600);
+})();
+</script>
+</body>
+</html>
