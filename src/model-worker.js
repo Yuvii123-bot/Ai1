@@ -1,33 +1,38 @@
 import { env, pipeline } from '@huggingface/transformers';
+import { loadGenerator } from './backend.js';
 
 env.allowLocalModels = false;
+// SharedArrayBuffer is unavailable on many phones unless cross-origin isolated.
+if (!self.crossOriginIsolated && env.backends.onnx.wasm) env.backends.onnx.wasm.numThreads = 1;
 const MODEL = 'onnx-community/Qwen2.5-0.5B-Instruct';
 let generator;
+let backend;
+const status = text => self.postMessage({ type: 'status', text });
 
 self.onmessage = async ({ data }) => {
   try {
     if (data.type !== 'generate') return;
-    if (!navigator.gpu) throw new Error('WebGPU is not available. Try an up-to-date Chrome or Edge browser on a computer with WebGPU enabled.');
     if (!generator) {
-      self.postMessage({ type: 'status', text: 'Downloading Qwen for the first time…' });
-      generator = await pipeline('text-generation', MODEL, {
-        device: 'webgpu', dtype: 'q4',
-        progress_callback: (event) => {
+      status('Loading Qwen. First use downloads several hundred MB…');
+      ({ generator, backend } = await loadGenerator({
+        gpu: navigator.gpu, createPipeline: pipeline, model: MODEL, status,
+        progress: event => {
           if (event.status === 'progress' && typeof event.progress === 'number') {
-            self.postMessage({ type: 'status', text: `Downloading model files… ${Math.round(event.progress)}% (current file)` });
+            status(`Downloading model files… ${Math.round(event.progress)}% (current file)`);
           } else if (event.status === 'ready') {
-            self.postMessage({ type: 'status', text: 'Model ready. Thinking…' });
+            status('Model ready. Thinking…');
           }
         },
-      });
+      }));
     }
-    self.postMessage({ type: 'status', text: 'Thinking…' });
-    const output = await generator(data.messages, { max_new_tokens: 256, do_sample: false });
+    status(backend === 'wasm' ? 'Thinking on your phone’s CPU… this can take a while.' : 'Thinking…');
+    const output = await generator(data.messages, { max_new_tokens: 128, do_sample: false });
     const generated = output?.[0]?.generated_text;
     const text = Array.isArray(generated) ? generated.at(-1)?.content : null;
     if (typeof text !== 'string' || !text.trim()) throw new Error('The model returned an empty response. Please try again.');
     self.postMessage({ type: 'complete', text: text.trim() });
   } catch (error) {
-    self.postMessage({ type: 'error', text: error?.message || 'Something went wrong while running Qwen.' });
+    console.error('Qwen failed:', error);
+    self.postMessage({ type: 'error', text: 'Qwen could not run on this device. Check your connection and available memory, then try again. Some phones cannot run this model.' });
   }
 };

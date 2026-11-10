@@ -30,7 +30,7 @@ test('chat sends conversation, displays plain text, recovers errors and resets',
   assert.equal(prompt.value, 'Retry me');
   assert.equal(document.querySelector('#status').textContent, 'Device unavailable');
   assert.equal(document.querySelectorAll('.message').length, 2);
-  document.querySelector('#new-chat').click();
+  document.querySelector('#mobile-new-chat').click();
   assert.equal(document.querySelectorAll('.message').length, 0);
   assert.equal(document.querySelector('#welcome').hidden, false);
   dom.window.close();

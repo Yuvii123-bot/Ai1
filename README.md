@@ -1,10 +1,10 @@
 # Ai1 — chat with Qwen
 
-Ai1 is a browser chat interface for **Qwen2.5 0.5B Instruct**. The Vercel-compatible version runs a quantized copy of the model **on your device**, using [Transformers.js](https://github.com/huggingface/transformers.js) and WebGPU; it doesn't need an AI API key or a model server. The app code is in this repository; the model weights are not committed to Git. On first use, the browser downloads them from [Hugging Face](https://huggingface.co/onnx-community/Qwen2.5-0.5B-Instruct) (hundreds of MB). Allow time, internet and storage; the browser may cache the files for later use. Downloading contacts Hugging Face, but prompts and generated replies are processed in your browser, not sent to an inference API. Conversation history is kept only in the current tab and is lost on reload.
+Ai1 is a browser chat interface for **Qwen2.5 0.5B Instruct**. The Vercel-compatible version runs a quantized copy of the model **on your device**, using [Transformers.js](https://github.com/huggingface/transformers.js) with WebGPU when available and a WebAssembly CPU fallback; it doesn't need an AI API key or a model server. The app code is in this repository; the model weights are not committed to Git. On first use, the browser downloads them from [Hugging Face](https://huggingface.co/onnx-community/Qwen2.5-0.5B-Instruct) (hundreds of MB). Allow time, internet and storage; the browser may cache the files for later use. Downloading contacts Hugging Face, but prompts and generated replies are processed in your browser, not sent to an inference API. Conversation history is kept only in the current tab and is lost on reload.
 
 ## Run the browser app
 
-Requires Node.js 20+ for development and a recent WebGPU-capable browser/device (Chrome or Edge on desktop recommended). Some devices, mobile browsers and private browsing modes may not support WebGPU, caching or have sufficient memory. If initialization fails, the interface displays an error and allows retrying. This small model can make mistakes and is less capable than large hosted models.
+Requires Node.js 20+ for development and a recent browser with WebAssembly support. WebGPU is used when available; otherwise the app tries CPU inference, which can be much slower. Some phones and private browsing modes may lack enough memory or storage to run/cache the model, and browser support varies. If initialization fails, the interface displays an error and allows retrying. This small model can make mistakes and is less capable than large hosted models.
 
 ```sh
 npm ci
@@ -17,7 +17,7 @@ Open the displayed local URL, type a message and send it. The first message star
 
 ## Vercel
 
-Import the GitHub repository into a **new** Vercel project and select the `arena/d94d03c3-ai1` branch for the initial deployment. Vercel reads `vercel.json`, installs dependencies, runs `npm run build` and serves `dist/`. No environment variables or API keys are needed. Open the generated HTTPS deployment URL in a WebGPU-capable browser. Vercel hosts only the app and runtime assets; it does not host or run the model. The model downloads to and runs on the visitor's device.
+Import the GitHub repository into a **new** Vercel project and select the `arena/d94d03c3-ai1` branch for the initial deployment. Vercel reads `vercel.json`, installs dependencies, runs `npm run build` and serves `dist/`. No environment variables or API keys are needed. Open the generated HTTPS deployment URL in a recent browser. Vercel hosts only the app and runtime assets; it does not host or run the model. The model downloads to and runs on the visitor's device.
 
 ## Alternative: local Ollama server
 
