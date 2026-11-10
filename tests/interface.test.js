@@ -2,33 +2,30 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 
-test('chat sends conversation, displays plain text, recovers errors and resets', async () => {
+test('hosted chat sends conversation, renders safely, recovers errors and resets', async () => {
   const dom = new JSDOM('<div id="app"></div>', { url: 'https://example.com' });
   globalThis.document = dom.window.document;
-  class FakeWorker {
-    constructor() { FakeWorker.instance = this; }
-    postMessage(message) { this.lastMessage = structuredClone(message); }
-    receive(data) { this.onmessage({ data }); }
-    terminate() {}
-  }
-  globalThis.Worker = FakeWorker;
+  let requests = [];
+  let resolve;
+  globalThis.fetch = (url, options) => { requests.push({ url, ...JSON.parse(options.body) }); return new Promise(r => { resolve = r; }); };
   await import('../src/main.js');
   const form = document.querySelector('#chat-form');
   const prompt = document.querySelector('#prompt');
   const send = document.querySelector('#send');
   const submit = () => form.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+  const finish = async (ok, data) => { resolve({ ok, json: async () => data }); await new Promise(r => setImmediate(r)); };
   prompt.value = 'Hello'; submit();
-  assert.deepEqual(FakeWorker.instance.lastMessage.messages, [{ role: 'user', content: 'Hello' }]);
+  assert.deepEqual(requests[0], { url: '/api/chat', messages: [{ role: 'user', content: 'Hello' }] });
   assert.equal(send.disabled, true);
-  FakeWorker.instance.receive({ type: 'complete', text: '<img src=x onerror=alert(1)>' });
+  await finish(true, { text: '<img src=x onerror=alert(1)>' });
   assert.equal(document.querySelector('.message.assistant .message-content').textContent, '<img src=x onerror=alert(1)>');
   assert.equal(document.querySelector('.message img'), null);
   assert.equal(send.disabled, false);
   prompt.value = 'Retry me'; submit();
-  assert.equal(FakeWorker.instance.lastMessage.messages.length, 3);
-  FakeWorker.instance.receive({ type: 'error', text: 'Device unavailable' });
+  assert.equal(requests[1].messages.length, 3);
+  await finish(false, { error: 'Service busy' });
   assert.equal(prompt.value, 'Retry me');
-  assert.equal(document.querySelector('#status').textContent, 'Device unavailable');
+  assert.equal(document.querySelector('#status').textContent, 'Service busy');
   assert.equal(document.querySelectorAll('.message').length, 2);
   document.querySelector('#mobile-new-chat').click();
   assert.equal(document.querySelectorAll('.message').length, 0);
