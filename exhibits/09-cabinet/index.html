@@ -149,15 +149,15 @@ text-decoration:none;padding:5px 8px;border-radius:3px;transition:.25s;white-spa
         true scale; Monte-Carlo IoU; normalised edit distance.
       </p>
       <p style="margin-top:12px">
-        <a href="../10-orrery/index.html">I · Orrery</a> ·
-        <a href="../03-truesize/index.html">II · True Size</a> ·
-        <a href="../07-darkforest/index.html">III · Dark Forest</a> ·
-        <a href="../04-lifeseed/index.html">IV · Life Seed</a> ·
-        <a href="../01-nepal/index.html">V · Nepal</a> ·
-        <a href="../06-cartographer/index.html">VI · Cartographer</a> ·
-        <a href="../05-decoder/index.html">VII · Rosetta</a> ·
-        <a href="../02-leak/index.html">VIII · Leak Detector</a> ·
-        <a href="../08-meter/index.html">IX · Alchemist's Meter</a>
+        <a href="/exhibits/10-orrery/index.html">I · Orrery</a> ·
+        <a href="/exhibits/03-truesize/index.html">II · True Size</a> ·
+        <a href="/exhibits/07-darkforest/index.html">III · Dark Forest</a> ·
+        <a href="/exhibits/04-lifeseed/index.html">IV · Life Seed</a> ·
+        <a href="/exhibits/01-nepal/index.html">V · Nepal</a> ·
+        <a href="/exhibits/06-cartographer/index.html">VI · Cartographer</a> ·
+        <a href="/exhibits/05-decoder/index.html">VII · Rosetta</a> ·
+        <a href="/exhibits/02-leak/index.html">VIII · Leak Detector</a> ·
+        <a href="/exhibits/08-meter/index.html">IX · Alchemist's Meter</a>
       </p>
     </div>
   </div>
@@ -197,7 +197,7 @@ EXHIBITS.forEach((e,i)=>{
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td class="n">${e.n}</td>
-    <td class="t"><a href="../${e.slug}/index.html" target="_blank">${esc(e.title)}</a></td>
+    <td class="t"><a href="/exhibits/${e.slug}/index.html" target="_blank">${esc(e.title)}</a></td>
     <td style="color:#8f8b81;font-size:11px">${esc(e.what)}</td>
     <td class="num" data-k="bytes">—</td>
     <td class="num" data-k="lines">—</td>
@@ -219,7 +219,7 @@ async function audit(){
   for(const e of EXHIBITS){
     setCell(e.slug,'status','<span class="pill wait"><i></i>reading</span>');
     try{
-      const res = await fetch(`../${e.slug}/index.html`, {cache:'no-store'});
+      const res = await fetch(`/exhibits/${e.slug}/index.html`, {cache:'no-store'});
       if(!res.ok) throw new Error('HTTP '+res.status);
       const text = await res.text();
       const bytes = new Blob([text]).size;
@@ -269,7 +269,7 @@ async function verify(){
   let ok = 0, bad = 0;
   for(const e of EXHIBITS){
     try{
-      const text = await fetch(`../${e.slug}/index.html`, {cache:'no-store'}).then(r=>r.text());
+      const text = await fetch(`/exhibits/${e.slug}/index.html`, {cache:'no-store'}).then(r=>r.text());
       const scan = scanScripts(text);
       let errs = scan.errors.length, compiled = 0, external = 0;
       for(const s of scan.scripts){
@@ -314,7 +314,7 @@ document.getElementById('save').onclick = save;
 /* run it on load, quietly */
 setTimeout(audit, 350);
 </script>
-<div id="cabnav"><a class="home" href="../../index.html">The Cabinet</a><a href="../10-orrery/index.html">I</a><a href="../03-truesize/index.html">II</a><a href="../07-darkforest/index.html">III</a><a href="../04-lifeseed/index.html">IV</a><a href="../01-nepal/index.html">V</a><a href="../06-cartographer/index.html">VI</a><a href="../05-decoder/index.html">VII</a><a href="../02-leak/index.html">VIII</a><a href="../08-meter/index.html">IX</a><a href="../09-cabinet/index.html" class="cur">X</a></div>
+<div id="cabnav"><a class="home" href="/index.html">The Cabinet</a><a href="/exhibits/10-orrery/index.html">I</a><a href="/exhibits/03-truesize/index.html">II</a><a href="/exhibits/07-darkforest/index.html">III</a><a href="/exhibits/04-lifeseed/index.html">IV</a><a href="/exhibits/01-nepal/index.html">V</a><a href="/exhibits/06-cartographer/index.html">VI</a><a href="/exhibits/05-decoder/index.html">VII</a><a href="/exhibits/02-leak/index.html">VIII</a><a href="/exhibits/08-meter/index.html">IX</a><a href="/exhibits/09-cabinet/index.html" class="cur">X</a></div>
 
 <script>
 /* collection navigator — appears on hover near the bottom edge */
