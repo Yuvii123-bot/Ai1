@@ -136,11 +136,41 @@ export function paint(
   // which is what creates breathing space and a focal mass.
   const region = (x: number, y: number) => fbm(noise, x * lowFreq + 40, y * lowFreq + 11, 3, 2, 0.5);
   const field = (x: number, y: number) => {
-    // dominant, slow direction (the "current") + fast eddies on top
+    // Every style gets its own dynamics, not just its own palette: a shared
+    // flow field with different colours reads as five filters on one image.
     const low = fbm(noise, x * lowFreq, y * lowFreq, 3, 2, 0.5) * Math.PI * 1.6;
     const high = fbm(noise, x * freq, y * freq, 4, 2.1, 0.55) * Math.PI * 1.9;
-    const angle = low * 0.68 + high * 0.32 + (cfg.style === 'topography' ? y * 0.006 : 0);
-    return angle;
+    const dx = x - fx, dy = y - fy;
+    const r = Math.hypot(dx, dy) + 1e-3;
+    switch (cfg.style) {
+      case 'bloom': {
+        // Rosette of petals. Built from smooth sinusoids rather than atan2(dy,dx):
+        // the polar angle wraps at +/-pi and the discontinuity draws a hard seam
+        // straight across the canvas where strokes cross it.
+        const petals =
+          Math.sin(dx * 0.013 + Math.sin(dy * 0.007) * 2.1) * 1.15 +
+          Math.cos(dy * 0.011 - Math.cos(dx * 0.006) * 1.9) * 0.95;
+        const inward = -Math.exp(-r / (Math.min(W, H) * 0.30)) * 1.1;
+        return petals + inward + high * 0.22;
+      }
+      case 'nocturne':
+        // long horizontal sweeps with slow vertical drift
+        return high * 0.5 + Math.sin(y * 0.006 + low * 0.4) * 0.9 + Math.PI * 0.5 * 0.12;
+      case 'ink':
+        // calligraphic strokes: mostly parallel, occasional sharp turns
+        return low * 1.15 + (high > 0 ? 0.55 : -0.55) * 0.45 + 0.22;
+      case 'topography':
+        // contour lines: flow parallel to the iso-lines of a smooth height field
+        return low * 1.0 + Math.PI / 2 + y * 0.004;
+      default: {
+        // silk: a calm dominant current with fast eddies riding on top, plus a
+        // gentle rotation about the focal point. The rotation has to be smooth
+        // in r — dividing by r put a singular spine of converging strokes
+        // straight down the middle of the canvas.
+        const twist = 0.32 * Math.sin(r / (Math.min(W, H) * 0.42));
+        return low * 0.68 + high * 0.32 + twist;
+      }
+    }
   };
 
   const total = Math.round(cfg.strokeCount * (hint.strokes / DEFAULT_ART.strokeCount) * (0.6 + cfg.complexity * 0.9));
@@ -281,6 +311,13 @@ function gauss(rand: () => number) {
 
 /** Vector export: re-runs a *sampled* stroke set and returns SVG paths. */
 export function toSvg(W: number, H: number, cfg: ArtConfig, maxStrokes = 900): string {
+  // Guard the arguments: emitting `width="[object Object]"` or a path full of
+  // NaN produces a file that silently fails to open, which is far worse than an
+  // exception. Coerce to sane numbers and fall back to the defaults.
+  if (!cfg || typeof cfg !== 'object') cfg = DEFAULT_ART;
+  W = Number.isFinite(W) && W > 0 ? Math.round(W) : 1600;
+  H = Number.isFinite(H) && H > 0 ? Math.round(H) : 1200;
+  maxStrokes = Number.isFinite(maxStrokes) ? Math.max(1, Math.round(maxStrokes)) : 900;
   const rand = mulberry32(cfg.seed * 104729 + 7);
   const pal = makePalette(cfg.seed, cfg.style);
   const noise = makeNoise2D(cfg.seed % 100000);
