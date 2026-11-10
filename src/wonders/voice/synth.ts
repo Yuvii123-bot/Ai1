@@ -103,7 +103,10 @@ export function syllabify(word: string): string[] {
   w = w.replace(/([bcdfgklmnprstvz])\1/g, '$1');
   // silent final e ("shine" -> "shin", "time" -> "tim") but never on "the/he/she/be"
   const nV = [...w].filter(isVowelChar).length;
-  if (w.length > 2 && w.endsWith('e') && nV > 1 && !isVowelChar(w[w.length - 2])) w = w.slice(0, -1);
+  const SILENT_E_OK = /(?:[aeiouy][^aeiouy]|l|r)$/; // a consonant that can precede silent e
+  if (w.length > 3 && w.endsWith('e') && nV > 1 && !isVowelChar(w[w.length - 2]) && SILENT_E_OK.test(w.slice(0, -1))) {
+    w = w.slice(0, -1);
+  }
 
   // mark vowel-group nuclei
   const isV = (c: string) => isVowelChar(c);
@@ -128,7 +131,11 @@ export function syllabify(word: string): string[] {
     } else if (ONSETS.has(cluster)) {
       cuts.push(cStart); // legal cluster stays together: "se-cret"
     } else if (cluster.length === 2) {
-      cuts.push(cStart + 1); // split the pair: "win-ter"
+      // Never split a consonant pair that acts as one sound: "fireflies"
+      // must be fi-re-flies, not fi-ref-lies.
+      const pair = cluster;
+      const DIGRAPHS = ['ph', 'sh', 'ch', 'th', 'wh', 'gh', 'ck', 'ng', 'qu', 'kn', 'wr', 'gn', 'mb', 'mn', 'ps', 'pn'];
+      cuts.push(DIGRAPHS.includes(pair) ? cStart : cStart + 1);
     } else {
       // keep the last two as onset, rest as coda
       const tail = cluster.slice(-2);
@@ -253,6 +260,30 @@ function resonator(x: number, f: number, bw: number, sr: number) {
 
 export function synthesize(notes: Note[], text: string, opt: SynthOptions) {
   const sr = opt.sampleRate ?? 44100;
+  // Normalise loosely-typed options: a missing or malformed value must never
+  // propagate into the plan as NaN (which would yield a silent buffer).
+  const num = (v: unknown, fallback: number, lo: number, hi: number) => {
+    const n = typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+    return Math.min(hi, Math.max(lo, n));
+  };
+  opt = {
+    ...opt,
+    bpm: num((opt as any).bpm ?? (opt as any).tempo, 100, 40, 260),
+    vibrato: num(opt.vibrato, 0.4, 0, 1),
+    breath: num(opt.breath, 0.18, 0, 1),
+    brightness: num(opt.brightness, 0.5, 0, 1),
+    reverb: num(opt.reverb, 0.3, 0, 1),
+    harmony: num(opt.harmony, 0, 0, 1),
+    legato: num(opt.legato, 0.5, 0, 1),
+    voice: VOICE_TILT[opt.voice] ? opt.voice : 'tenor',
+  };
+  const safeNotes = (Array.isArray(notes) ? notes : []).filter(
+    (n) => n && Number.isFinite(n.midi) && Number.isFinite(n.beats) && n.beats > 0
+  );
+  if (!safeNotes.length) {
+    return { L: new Float32Array(0), R: new Float32Array(0), sampleRate: sr, duration: 0 };
+  }
+  notes = safeNotes;
   const syl = textToSyllables(text);
   const tilt = VOICE_TILT[opt.voice];
   const beat = 60 / opt.bpm;
@@ -271,7 +302,10 @@ export function synthesize(notes: Note[], text: string, opt: SynthOptions) {
     const vowel = [...ph].reverse().find((p) => p.type === 'vowel')?.sym || 'a';
     const onset = ph[0] && ph[0].type === 'consonant' ? CONS[ph[0].sym] ?? CONS.h : null;
     const dur = Math.max(0.09, n.beats * beat);
-    const f0 = midiToHz(n.midi * tilt.f0Scale);
+    // Human voices are never perfectly periodic: add slow pitch drift (shimmer
+    // is applied per-note here; jitter lives in the glottal pulse).
+    const drift = 1 + 0.0035 * Math.sin(k * 2.399963);
+    const f0 = midiToHz(n.midi * tilt.f0Scale) * drift;
     const prev = plan[plan.length - 1];
     const startT = Math.max(t, 0.12 + (n.start ?? 0) * beat);
     const fv = VOWELS[vowel] || VOWELS.a;
@@ -322,8 +356,8 @@ export function synthesize(notes: Note[], text: string, opt: SynthOptions) {
     while (segIdx < plan.length - 1 && time > plan[segIdx].t1) segIdx++;
     const seg = plan[segIdx];
     if (!seg) break;
-    const local = time - seg.t0;
-    const segDur = seg.t1 - seg.t0;
+    const local = Math.max(0, time - seg.t0);
+    const segDur = Math.max(1e-3, seg.t1 - seg.t0);
     const prog = Math.min(1, Math.max(0, local / segDur));
 
     // ---- pitch: glide in, vibrato with delayed onset, slight drift ----
@@ -475,7 +509,41 @@ function midiToHz(m: number) {
   return 440 * Math.pow(2, (m - 69) / 12);
 }
 
+/**
+ * Slow automatic gain control: a singer holds a phrase at roughly constant
+ * loudness, but different vowels excite the formant cascade by very different
+ * amounts (a vowel whose F1 sits on the fundamental can be 15 dB louder than
+ * one that doesn't). This measures short-time RMS and eases each region toward
+ * the median level, bounded to +/-7 dB so intentional dynamics survive.
+ */
+function autoLevel(L: Float32Array, R: Float32Array, sr: number) {
+  const n = L.length;
+  const win = 1024;
+  const frames = Math.max(1, Math.floor(n / win));
+  const rms = new Float32Array(frames);
+  for (let f = 0; f < frames; f++) {
+    let acc = 0;
+    const s = f * win;
+    for (let i = s; i < s + win && i < n; i++) acc += L[i] * L[i];
+    rms[f] = Math.sqrt(acc / win);
+  }
+  // median of the *voiced* frames only
+  const voiced = Array.from(rms).filter((v) => v > 1e-4).sort((a, b) => a - b);
+  if (voiced.length < 4) return;
+  const target = voiced[Math.floor(voiced.length * 0.55)];
+  // one-pole smoothing of the gain (tau ~ 60 ms)
+  const a = 1 - Math.exp(-1 / ((0.06 * sr) / win));
+  let g = 1;
+  for (let f = 0; f < frames; f++) {
+    const want = rms[f] > 1e-4 ? Math.min(2.24, Math.max(0.45, target / rms[f])) : g;
+    g += (want - g) * a;
+    const s = f * win;
+    for (let i = s; i < s + win && i < n; i++) { L[i] *= g; R[i] *= g; }
+  }
+}
+
 function finalize(L: Float32Array, R: Float32Array, sr: number) {
+  autoLevel(L, R, sr);
   // normalise to -1 dBFS, gentle soft-clip, fade edges
   let peak = 0;
   for (let i = 0; i < L.length; i++) {

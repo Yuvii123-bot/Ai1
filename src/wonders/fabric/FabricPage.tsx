@@ -350,20 +350,31 @@ export default function FabricPage() {
                 </div>
                 <div style={{ height: 1, background: 'var(--line)' }} />
                 <div className="section-title" style={{ margin: 0, fontSize: 11 }}>Why — every point accounted for</div>
-                {selected.reasons.length ? selected.reasons.map((r, i) => (
+                {selected.reasons.length ? (() => {
+                  const total = selected.reasons.reduce((a, b) => a + b.contribution, 0) || 1;
+                  return selected.reasons.map((r, i) => {
+                    const share = r.contribution / total;
+                    return (
                   <div key={i}>
                     <div className="spread" style={{ marginBottom: 3 }}>
                       <span style={{ fontSize: 11.5 }}>{r.label}</span>
-                      <span className="mono" style={{ fontSize: 10.5, color: r.contribution > 0.12 ? '#ff8f9b' : 'var(--txt-3)' }}>
-                        +{(r.contribution * 100).toFixed(1)}
+                      <span className="mono" style={{ fontSize: 10.5, color: share > 0.2 ? '#ff8f9b' : 'var(--txt-3)' }}>
+                        {(share * 100).toFixed(0)}%
                       </span>
                     </div>
                     <div style={{ fontSize: 10.5, color: 'var(--txt-3)', lineHeight: 1.5 }}>{r.detail}</div>
                     <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', marginTop: 5 }}>
-                      <div style={{ height: '100%', width: `${Math.min(100, r.contribution * 330)}%`, borderRadius: 99, background: 'linear-gradient(90deg,#8b6cff,#ff5cae)' }} />
+                      <div style={{ height: '100%', width: `${Math.max(2, share * 100)}%`, borderRadius: 99, background: 'linear-gradient(90deg,#8b6cff,#ff5cae)' }} />
                     </div>
                   </div>
-                )) : <div style={{ fontSize: 11.5, color: 'var(--txt-3)' }}>No feature crossed its signal threshold — this looks like normal behaviour.</div>}
+                    );
+                  });
+                })() : <div style={{ fontSize: 11.5, color: 'var(--txt-3)' }}>No feature crossed its signal threshold — this looks like normal behaviour.</div>}
+                {selected.reasons.length > 0 && (
+                  <div style={{ fontSize: 10, color: 'var(--txt-3)', fontFamily: 'var(--mono)', letterSpacing: '0.04em' }}>
+                    SHARE OF TOTAL RISK · Σ {(selected.reasons.reduce((a, b) => a + b.contribution, 0) * 100).toFixed(0)} PTS
+                  </div>
+                )}
                 <div style={{ height: 1, background: 'var(--line)' }} />
                 <div className="kv"><span>Model score</span><span>{(selected.score * 100).toFixed(1)} / 100</span></div>
                 {selected.txn.isFraud !== undefined && (

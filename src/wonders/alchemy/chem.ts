@@ -475,7 +475,7 @@ export const MOLECULES: { name: string; smiles: string; note: string }[] = [
   { name: 'Capsaicin', smiles: 'COc1cc(CNC(=O)CCCC=CCCCC)c(O)cc1', note: 'The heat in chilli' },
   { name: 'Morphine', smiles: 'CN1CCC23c4c5ccc(O)c4OC2C(O)C=CC3C1C5', note: 'A pentacyclic alkaloid' },
   { name: 'Penicillin G', smiles: 'CC1(C)S[C@@H]2[C@H](NC(=O)Cc3ccccc3)C(=O)N2[C@H]1C(=O)O', note: 'The antibiotic that changed history' },
-  { name: 'Benzene-d6', smiles: 'c1ccccc1', note: 'Deuterated benzene' },
+  { name: 'Acetone', smiles: 'CC(C)=O', note: 'The simplest ketone (C3H6O)' },
   { name: 'Cubane', smiles: 'C12C3C4C1C5C2C3C45', note: 'A cube of carbon (C8H8)' },
   { name: 'Water', smiles: 'O', note: 'Two hydrogens, one oxygen' },
   { name: 'Cyclohexane', smiles: 'C1CCCCC1', note: 'Chair conformation' },
