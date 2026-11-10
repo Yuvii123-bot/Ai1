@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(ENDPOINT, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: MODEL, messages: messages.map(({ role, content }) => ({ role, content })), max_tokens: 768, stream: false, chat_template_kwargs: { enable_thinking: false } }),
+      body: JSON.stringify({ model: MODEL, messages: messages.map(({ role, content }) => ({ role, content })), max_tokens: 768, stream: false, reasoning_effort: "none" }),
       signal: AbortSignal.timeout(45000),
     });
     if (!response.ok) {
