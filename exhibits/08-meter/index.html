@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Alchemist's Meter</title>
+<style>
+:root{--bg:#07080d;--paper:#efe9dd;--dim:#8b8778;--brass:#c9a86a;--brass-hi:#e8cf9a;
+--line:rgba(201,168,106,.16);--mono:"JetBrains Mono",ui-monospace,monospace;
+--sans:"Inter",-apple-system,"Segoe UI",sans-serif;--serif:"Cormorant Garamond",Georgia,serif;
+--green:#8fc09a;--red:#d8776a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--paper);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+.bg{position:fixed;inset:0;z-index:-1;pointer-events:none;
+background:radial-gradient(70% 55% at 50% -5%,rgba(201,168,106,.08),transparent 62%),
+radial-gradient(45% 40% at 95% 95%,rgba(140,160,210,.05),transparent 70%)}
+main{max-width:1080px;margin:0 auto;padding:0 24px 80px}
+
+header{padding:clamp(44px,9vh,82px) 0 26px}
+.eyebrow{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--brass-dim);margin-bottom:20px}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(34px,6vw,62px);line-height:.98;letter-spacing:-.02em}
+h1 em{font-style:italic;color:var(--brass-hi)}
+.lede{max-width:620px;margin-top:20px;font-size:13.5px;line-height:1.8;color:#a8a294}
+
+/* input */
+.builder{margin-top:32px;background:linear-gradient(165deg,rgba(18,21,29,.92),rgba(9,11,16,.96));
+border:1px solid var(--line);border-radius:5px;padding:clamp(18px,3vw,28px)}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:8px}
+.field input[type=text],.field select{width:100%;background:rgba(0,0,0,.3);border:1px solid var(--line);
+color:var(--paper);font-family:var(--sans);font-size:14px;padding:12px 15px;border-radius:4px;outline:none;transition:.3s}
+.field input:focus,.field select:focus{border-color:rgba(201,168,106,.5);box-shadow:0 0 0 3px rgba(201,168,106,.06)}
+.three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+@media(max-width:640px){.three{grid-template-columns:1fr}}
+.rangebox{display:flex;align-items:center;gap:14px}
+input[type=range]{-webkit-appearance:none;flex:1;height:3px;background:rgba(201,168,106,.2);border-radius:3px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;
+background:var(--brass-hi);box-shadow:0 0 12px rgba(232,207,154,.6);cursor:grab}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:var(--brass-hi)}
+.rangeval{font-family:var(--mono);font-size:13px;color:var(--brass-hi);min-width:74px;text-align:right}
+
+button.go{width:100%;margin-top:6px;background:linear-gradient(90deg,rgba(201,168,106,.22),rgba(201,168,106,.12));
+border:1px solid rgba(201,168,106,.45);color:var(--brass-hi);padding:15px;
+border-radius:4px;font-family:var(--sans);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;
+cursor:pointer;transition:.35s;font-weight:500}
+button.go:hover{background:rgba(201,168,106,.3);box-shadow:0 0 30px -8px rgba(201,168,106,.5)}
+
+/* result */
+#out{display:none;margin-top:34px;animation:fadeup .7s both}
+#out.on{display:block}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:720px){.grid2{grid-template-columns:1fr}}
+.card{background:rgba(255,255,255,.018);border:1px solid rgba(255,255,255,.055);border-radius:4px;padding:18px 20px}
+.card .k{font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.price{font-family:var(--serif);font-size:40px;line-height:1;color:var(--brass-hi);letter-spacing:-.02em}
+.price small{font-size:14px;color:var(--dim);letter-spacing:0}
+.price .cur{font-size:20px;color:var(--brass);margin-right:3px}
+.sub{font-size:10.5px;color:var(--dim);margin-top:9px;line-height:1.6}
+
+table{width:100%;border-collapse:collapse;margin-top:6px}
+td{padding:6px 0;font-size:11.5px;border-bottom:1px dashed rgba(201,168,106,.1)}
+td:last-child{text-align:right;font-family:var(--mono);font-size:11px;color:var(--brass-hi)}
+tr:last-child td{border:0;padding-top:9px;font-weight:500;color:var(--paper)}
+
+/* bar chart */
+.bars{margin-top:6px}
+.bar{display:grid;grid-template-columns:96px 1fr 46px;gap:10px;align-items:center;margin-bottom:7px;font-size:10.5px}
+.bar .n{color:var(--dim);font-size:10px}
+.bar .t{height:8px;background:rgba(255,255,255,.045);border-radius:3px;overflow:hidden}
+.bar .t i{display:block;height:100%;border-radius:3px;width:0;transition:width 1.1s cubic-bezier(.16,1,.3,1)}
+.bar .v{text-align:right;font-family:var(--mono);font-size:10px;color:var(--brass)}
+
+/* plan */
+#plan{margin-top:14px}
+.steps{display:grid;gap:8px;counter-reset:s}
+.step{display:grid;grid-template-columns:28px 1fr;gap:12px;align-items:start;
+background:rgba(255,255,255,.015);border-left:2px solid rgba(201,168,106,.3);
+border-radius:3px;padding:10px 13px;font-size:11.5px;line-height:1.6;color:#b8b2a5}
+.step::before{counter-increment:s;content:counter(s);font-family:var(--mono);font-size:9px;
+color:var(--brass);padding-top:2px}
+.step b{color:var(--paper);font-weight:500}
+
+/* proposal */
+#proposal{margin-top:14px;background:rgba(0,0,0,.24);border:1px solid rgba(201,168,106,.14);
+border-radius:4px;padding:20px;font-family:var(--mono);font-size:11px;line-height:1.85;
+color:#c8c2b4;white-space:pre-wrap;max-height:340px;overflow-y:auto}
+.copybar{display:flex;gap:8px;margin-top:11px}
+.copybar button{background:rgba(201,168,106,.08);border:1px solid var(--line);color:var(--brass-hi);
+padding:8px 15px;border-radius:3px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+cursor:pointer;font-family:var(--sans);transition:.3s}
+.copybar button:hover{background:rgba(201,168,106,.2)}
+.hint{font-size:10px;color:#6b6862;margin-top:14px;line-height:1.8}
+.hint b{color:var(--brass-dim);font-weight:400}
+.conf{display:inline-flex;gap:5px;align-items:center;font-size:9px;letter-spacing:.14em;
+text-transform:uppercase;color:var(--dim);margin-left:auto}
+.conf i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+
+/* --- collection navigator --- */
+#cabnav{position:fixed;left:0;right:0;bottom:0;z-index:8000;display:flex;align-items:center;
+justify-content:center;gap:5px;padding:7px 12px;background:rgba(7,8,13,.82);
+border-top:1px solid rgba(201,168,106,.13);backdrop-filter:blur(14px);
+font-family:"Inter",-apple-system,sans-serif;transform:translateY(105%);
+transition:transform .45s cubic-bezier(.16,1,.3,1)}
+#cabnav.show{transform:none}
+#cabnav a{font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:#6f6a60;
+text-decoration:none;padding:5px 8px;border-radius:3px;transition:.25s;white-space:nowrap}
+#cabnav a:hover{color:#e8cf9a;background:rgba(201,168,106,.13)}
+#cabnav a.cur{color:#c9a86a;background:rgba(201,168,106,.1)}
+#cabnav .home{color:#c9a86a;border-right:1px solid rgba(201,168,106,.18);margin-right:4px;padding-right:12px}
+@media(max-width:620px){#cabnav a{font-size:7px;padding:4px 4px;letter-spacing:.04em}}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<main>
+  <header>
+    <div class="eyebrow">Exhibit IX · pricing, planning, proposals</div>
+    <h1>The Alchemist's <em>Meter</em></h1>
+    <p class="lede">
+      Most people underprice their work by half, then write a proposal that
+      buries the number on page three. Describe the job, set three knobs, and the
+      machine produces a defensible price, a realistic schedule, and a proposal
+      you can send. Built from real freelance economics, not vibes.
+    </p>
+  </header>
+
+  <section class="builder">
+    <div class="field">
+      <label>What is the work?</label>
+      <input id="what" type="text" value="A landing page for a Himalayan trekking company, 5 sections, English + Nepali, with a booking form" spellcheck="false">
+    </div>
+    <div class="three">
+      <div class="field">
+        <label>Discipline</label>
+        <select id="disc">
+          <option value="design">Design</option>
+          <option value="dev" selected>Development</option>
+          <option value="writing">Writing</option>
+          <option value="video">Video</option>
+          <option value="consult">Consulting</option>
+          <option value="photo">Photography</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Your level</label>
+        <select id="level">
+          <option value="0.55">Learning (0–2 yrs)</option>
+          <option value="1" selected>Competent (2–5 yrs)</option>
+          <option value="1.7">Strong (5–10 yrs)</option>
+          <option value="2.6">Expert (10+ yrs)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Days of work</label>
+        <div class="rangebox">
+          <input id="days" type="range" min="1" max="60" value="10">
+          <span class="rangeval" id="daysv">10</span>
+        </div>
+      </div>
+    </div>
+    <div class="three">
+      <div class="field">
+        <label>Client</label>
+        <select id="client">
+          <option value="0.75">Individual / small shop</option>
+          <option value="1" selected>Small business</option>
+          <option value="1.5">Funded startup</option>
+          <option value="2.3">Corporate / NGO</option>
+          <option value="3">Government / enterprise</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Urgency</label>
+        <select id="urg">
+          <option value="1">Normal (3+ weeks)</option>
+          <option value="1.2" selected>Tight (1–2 weeks)</option>
+          <option value="1.55">Rush (under a week)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Currency</label>
+        <select id="cur">
+          <option value="NPR" selected>Nepali Rupee (NPR)</option>
+          <option value="USD">US Dollar (USD)</option>
+          <option value="INR">Indian Rupee (INR)</option>
+          <option value="EUR">Euro (EUR)</option>
+          <option value="GBP">Pound (GBP)</option>
+        </select>
+      </div>
+    </div>
+    <button class="go" id="run">Cast the number</button>
+    <div class="hint">
+      <b>Where the numbers come from:</b> a base day-rate per discipline calibrated to
+      what clients in Nepal actually pay, adjusted by your experience, the client's
+      buying power and urgency — then loaded with real overhead (tax, unpaid admin,
+      tools, sick days). The price is what you must charge to actually keep that
+      day-rate, which is almost always higher than people think.
+    </div>
+  </section>
+
+  <section id="out">
+    <div class="grid2">
+      <div class="card">
+        <div class="k">Quote this</div>
+        <div class="price" id="quote">—</div>
+        <div class="sub" id="quotesub">—</div>
+      </div>
+      <div class="card">
+        <div class="k">Yours after tax provision</div>
+        <div class="price" id="take">—</div>
+        <div class="sub" id="takesub">—</div>
+      </div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px">
+      <div class="card">
+        <div class="k">The meter</div>
+        <table id="meter"></table>
+      </div>
+      <div class="card">
+        <div class="k">Where the money goes</div>
+        <div class="bars" id="bars"></div>
+        <div class="sub" id="barsnote"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="k">The plan</div>
+      <div class="steps" id="plan"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="k">The proposal <span class="conf"><i></i> ready to send</span></div>
+      <div id="proposal"></div>
+      <div class="copybar">
+        <button id="copy">Copy proposal</button>
+        <button id="dl">Download .md</button>
+      </div>
+      <div class="hint">
+        Send this as plain text in the first email. Attach nothing. The number is on
+        line four, because burying it is how proposals die.
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ============================================================
+   THE ALCHEMIST'S METER
+   ============================================================ */
+
+const $ = s => document.querySelector(s);
+const money = (n, cur) => {
+  const fmt = Math.round(n).toLocaleString('en-US');
+  const sym = {NPR:'NPR ', USD:'$', INR:'₹', EUR:'€', GBP:'£'}[cur] || '';
+  return sym + fmt;
+};
+
+/* base day rates in NPR, competent level, small business */
+/* Base day rates in NPR for a competent freelancer working from Nepal.
+   These are calibrated to what clients here actually pay — not to
+   US freelance survey numbers, which are 4–6x higher and will make
+   you lose every local bid. Pick the currency selector to see the
+   same quote in dollars or euros. */
+const BASE = {
+  design:    7500,
+  dev:       9000,
+  writing:   5000,
+  video:    12000,
+  consult:  15000,
+  photo:     9000
+};
+const LABEL = {design:'Design',dev:'Development',writing:'Writing',video:'Video',consult:'Consulting',photo:'Photography'};
+
+/* FX to NPR, for display only */
+const FX = {NPR:1, USD:1/133, INR:1/1.6, EUR:1/145, GBP:1/170};
+
+/* ---------- the calculation ---------- */
+function compute(){
+  const what  = $('#what').value.trim() || 'the project';
+  const disc  = $('#disc').value;
+  const level = +$('#level').value;
+  const days  = +$('#days').value;
+  const client= +$('#client').value;
+  const urg   = +$('#urg').value;
+  const cur   = $('#cur').value;
+
+  const base = BASE[disc];
+  const rawDay = base * level * client * urg;      // what the market will bear
+
+  /* overhead: what you must add so that the day-rate is actually yours */
+  const OVERHEAD = 0.32;    // tax, tools, admin, unpaid sales, sick days
+  const RISK     = 0.10;    // scope creep, revisions, late payment
+  const dayRate  = rawDay * (1 + OVERHEAD) * (1 + RISK);
+
+  const subtotal = dayRate * days;
+  /* fixed costs a real project carries */
+  const extras = [];
+  if(disc === 'dev')  extras.push(['Hosting + domain (year 1)', 9000]);
+  if(disc === 'design' || disc === 'dev') extras.push(['Stock / fonts / licences', 4500]);
+  if(disc === 'video' || disc === 'photo') extras.push(['Equipment + travel', days*1400]);
+  if(disc === 'writing') extras.push(['Research + interviews', days*900]);
+  if(/nepal|bilingual|translat/i.test(what)) extras.push(['Bilingual copy review', 6000]);
+  if(/book|form|payment|checkout|integrat/i.test(what)) extras.push(['Third-party integration', 12000]);
+  const extrasTotal = extras.reduce((s,e)=>s+e[1],0);
+
+  const total = subtotal + extrasTotal;
+
+  /* what the client sees: round to a confident number */
+  const round = n => {
+    if(n < 20000) return Math.ceil(n/1000)*1000;
+    if(n < 100000) return Math.ceil(n/5000)*5000;
+    if(n < 500000) return Math.ceil(n/10000)*10000;
+    return Math.ceil(n/50000)*50000;
+  };
+  const quoted = round(total * 1.06);   // 6% negotiation room, pre-baked
+
+  const tax = quoted * 0.13;            // VAT / income tax provision
+  const overheadCash = quoted * OVERHEAD/(1+OVERHEAD+RISK*1);
+  const takeHome = quoted - tax - (extrasTotal*0.4);
+
+  return { what, disc, level, days, client, urg, cur, dayRate, subtotal,
+           extras, extrasTotal, total, quoted, tax, takeHome, rawDay };
+}
+
+/* ---------- render ---------- */
+function render(r){
+  const cur = r.cur;
+  $('#out').classList.add('on');
+
+  $('#quote').innerHTML = `<span class="cur"></span>${money(r.quoted*FX[cur], cur)}`;
+  $('#quotesub').innerHTML =
+    `${money(r.quoted/r.days*FX[cur], cur)} per day · ${r.days} days · ${LABEL[r.disc]}<br>
+     Includes ${r.extras.length} fixed cost${r.extras.length===1?'':'s'} · ${Math.round((1-(r.quoted*0.06/r.quoted))*100)}% negotiation room built in.`;
+
+  $('#take').innerHTML = `${money(r.takeHome*FX[cur], cur)}`;
+  $('#takesub').innerHTML =
+    `Net of the 13% tax provision and pass-through costs.<br>
+     Your real day rate: <b style="color:var(--brass-hi)">${money(r.takeHome/r.days*FX[cur], cur)}</b>`;
+  $('#take').style.color = r.takeHome > r.quoted*0.6 ? 'var(--green)' : 'var(--brass-hi)';
+
+  /* meter table */
+  const rows = [
+    ['Base day rate ('+LABEL[r.disc]+')', money(BASE[r.disc]*FX[cur], cur)],
+    ['× Experience', (r.level).toFixed(2)+'×'],
+    ['× Client buying power', (r.client).toFixed(2)+'×'],
+    ['× Urgency', r.urg.toFixed(2)+'×'],
+    ['Overhead (+32%) & risk (+10%)', money((r.dayRate-BASE[r.disc]*r.level*r.client*r.urg)*FX[cur], cur)],
+    ['Your day rate', money(r.dayRate*FX[cur], cur)],
+    ['× '+r.days+' days', money(r.subtotal*FX[cur], cur)],
+  ];
+  for(const e of r.extras) rows.push([e[0], money(e[1]*FX[cur], cur)]);
+  rows.push(['<b>Quote</b>', '<b>'+money(r.quoted*FX[cur], cur)+'</b>']);
+  $('#meter').innerHTML = rows.map(([a,b])=>`<tr><td>${a}</td><td>${b}</td></tr>`).join('');
+
+  /* bars */
+  const parts = [
+    ['Your time', r.subtotal, '#c9a86a'],
+    ['Fixed costs', r.extrasTotal, '#8fa8c8'],
+    ['Tax provision', r.tax, '#d8a0a0'],
+    ['Buffer', r.quoted - r.subtotal - r.extrasTotal - r.tax, '#8fc09a'],
+  ].filter(p=>p[1] > 0);
+  const max = Math.max(...parts.map(p=>p[1]));
+  $('#bars').innerHTML = parts.map(p=>`
+    <div class="bar"><span class="n">${p[0]}</span>
+      <span class="t"><i style="background:${p[2]}" data-w="${Math.round(p[1]/max*100)}%"></i></span>
+      <span class="v">${Math.round(p[1]/r.quoted*100)}%</span></div>`).join('');
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('#bars .t i').forEach(el=>el.style.width = el.dataset.w);
+  });
+  $('#barsnote').textContent = 'Of every 100 the client pays, this is where it goes.';
+
+  /* plan */
+  const d = r.days;
+  const mk = (f)=>Math.max(1, Math.round(d*f));
+  const steps = [
+    `<b>Day 1 — the brief.</b> One call, 45 minutes, recorded. Ask what success looks like in three months, not what they want it to look like.`,
+    `<b>Days 1–${mk(.2)} — scope in writing.</b> Send a one-page scope: what is included, what is explicitly not, and what a change costs. This single page prevents most disputes.`,
+    `<b>Days ${mk(.2)+1}–${mk(.55)} — build.</b> Two checkpoints, not ten. Show work at 30% and 70%, never at 95%.`,
+    `<b>Days ${mk(.55)+1}–${mk(.85)} — revisions, capped.</b> Two rounds included. A third round is a new, small invoice.`,
+    `<b>Days ${mk(.85)+1}–${d} — handover.</b> Deliver files, credentials, and a short recording of how to use it. Ask for the testimonial while they are still delighted.`,
+    `<b>Payment.</b> 40% up front, 30% at the second checkpoint, 30% on handover. Never invoice the final 30% after delivery — that is when clients become slow.`,
+    `<b>The follow-on.</b> Two weeks after handover, send one paragraph: “Here is the one thing I would improve next.” It converts at a surprising rate.`,
+  ];
+  $('#plan').innerHTML = steps.map(s=>`<div class="step">${s}</div>`).join('');
+
+  /* proposal */
+  const ref = 'ALC-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*900)+100);
+  const today = new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  const proposal =
+`Subject: ${r.what.slice(0,60)} — proposal and fixed price
+
+Hello,
+
+Thank you for the conversation. Here is the price, up front, because
+you should not have to read three pages to find it.
+
+  Total: ${money(r.quoted*FX[cur], cur)} (fixed)
+  Timeline: ${r.days} working days from approval
+  Payment: 40% to begin, 30% at review, 30% at handover
+  Reference: ${ref}
+  Date: ${today}
+
+WHAT YOU GET
+${r.what}
+${r.extras.map(e=>'  • '+e[0]).join('\n')}
+
+WHAT IS INCLUDED
+  • ${r.days} working days of ${LABEL[r.disc].toLowerCase()}
+  • Two rounds of revisions
+  • A recorded walkthrough at handover
+  • All source files and credentials, yours to keep
+
+WHAT IS NOT INCLUDED
+  • A third round of revisions (quoted separately, usually
+    ${money(r.dayRate*0.6*FX[cur], cur)})
+  • Content writing not listed above
+  • Ongoing maintenance after handover
+
+WHY THIS PRICE
+  The price reflects ${r.days} working days at a rate that covers my
+  time, tools, tax and the risk of the work changing shape. It is
+  fixed: if the work takes longer than I expect, that is my problem,
+  not yours. If it takes less, the price does not change either —
+  you are buying the outcome.
+
+NEXT STEP
+  Reply "approved" and I will send an invoice for the first 40% and
+  a start date. If anything above is wrong, tell me which line and
+  I will re-quote that line only.
+
+Thank you,
+[your name]`;
+  $('#proposal').textContent = proposal;
+  $('#proposal').dataset.text = proposal;
+  $('#proposal').dataset.filename = 'proposal-' + ref + '.md';
+}
+
+/* ---------- wiring ---------- */
+$('#days').addEventListener('input', e => { $('#daysv').textContent = e.target.value; });
+$('#run').onclick = () => {
+  render(compute());
+  setTimeout(()=>$('#out').scrollIntoView({behavior:'smooth',block:'start'}), 80);
+};
+$('#copy').onclick = async () => {
+  const box = $('#proposal');
+  try{ await navigator.clipboard.writeText(box.dataset.text); $('#copy').textContent='Copied'; }
+  catch(e){
+    const r = document.createRange(); r.selectNodeContents(box);
+    const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    $('#copy').textContent='Selected — press ⌘C';
+  }
+  setTimeout(()=>$('#copy').textContent='Copy proposal', 1600);
+};
+$('#dl').onclick = () => {
+  const box = $('#proposal');
+  const blob = new Blob([box.dataset.text], {type:'text/markdown'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = box.dataset.filename;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+};
+
+/* demo on load */
+render(compute());
+</script>
+<div id="cabnav"><a class="home" href="../../index.html">The Cabinet</a><a href="../10-orrery/index.html">I</a><a href="../03-truesize/index.html">II</a><a href="../07-darkforest/index.html">III</a><a href="../04-lifeseed/index.html">IV</a><a href="../01-nepal/index.html">V</a><a href="../06-cartographer/index.html">VI</a><a href="../05-decoder/index.html">VII</a><a href="../02-leak/index.html">VIII</a><a href="../08-meter/index.html" class="cur">IX</a><a href="../09-cabinet/index.html">X</a></div>
+
+<script>
+/* collection navigator — appears on hover near the bottom edge */
+(function(){
+  var n = document.getElementById('cabnav');
+  if(!n) return;
+  var t;
+  function reveal(){ n.classList.add('show'); clearTimeout(t);
+    t = setTimeout(function(){ n.classList.remove('show'); }, 2600); }
+  document.addEventListener('mousemove', function(e){
+    if(e.clientY > innerHeight - 70) reveal();
+  });
+  window.addEventListener('touchstart', function(e){
+    if(e.touches[0].clientY > innerHeight - 90) reveal();
+  }, {passive:true});
+  setTimeout(reveal, 600);
+})();
+</script>
+</body>
+</html>

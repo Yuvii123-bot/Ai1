@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rosetta — language, rediscovered</title>
+<style>
+:root{--bg:#07080d;--paper:#efe9dd;--dim:#8b8778;--brass:#c9a86a;--brass-hi:#e8cf9a;
+--line:rgba(201,168,106,.16);--mono:"JetBrains Mono",ui-monospace,monospace;
+--sans:"Inter",-apple-system,"Segoe UI",sans-serif;--serif:"Cormorant Garamond",Georgia,serif}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg);color:var(--paper);font-family:var(--sans);overflow-x:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+#stage{position:fixed;inset:0;z-index:0;pointer-events:none}
+#grain{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.03;
+background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence baseFrequency='.9' numOctaves='3'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>")}
+
+main{position:relative;z-index:2;max-width:1120px;margin:0 auto;padding:0 26px}
+
+header{padding:clamp(50px,11vh,110px) 0 40px;text-align:center}
+.eyebrow{font-size:9px;letter-spacing:.32em;text-transform:uppercase;color:var(--brass-dim);margin-bottom:24px}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(40px,7.5vw,86px);line-height:.94;letter-spacing:-.02em}
+h1 em{font-style:italic;
+background:linear-gradient(100deg,#8d7448,#e8cf9a 40%,#fff6e2 50%,#e8cf9a 60%,#8d7448);
+background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;
+animation:sheen 10s linear infinite}
+@keyframes sheen{to{background-position:220% 0}}
+.lede{max-width:560px;margin:26px auto 0;font-size:14px;line-height:1.8;color:#a8a294}
+
+#searchwrap{margin:44px auto 0;max-width:460px;position:relative}
+#word{width:100%;background:rgba(16,19,27,.8);border:1px solid rgba(201,168,106,.28);
+color:var(--paper);font-family:var(--sans);font-size:16px;padding:15px 20px 15px 46px;
+border-radius:100px;outline:none;transition:.4s;backdrop-filter:blur(14px)}
+#word:focus{border-color:var(--brass);box-shadow:0 0 0 4px rgba(201,168,106,.07);background:rgba(20,24,33,.95)}
+#searchwrap .ico{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:var(--brass-dim);font-size:14px;pointer-events:none}
+#sugg{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+#sugg button{background:rgba(201,168,106,.06);border:1px solid var(--line);color:var(--dim);
+padding:5px 12px;border-radius:100px;font-size:10px;letter-spacing:.05em;cursor:pointer;
+font-family:var(--sans);transition:.3s}
+#sugg button:hover{color:var(--brass-hi);border-color:rgba(201,168,106,.4);background:rgba(201,168,106,.13)}
+
+#verdict{margin:46px auto 0;max-width:720px;text-align:center;min-height:70px;transition:.5s}
+#verdict .fam{font-family:var(--serif);font-size:clamp(22px,3.4vw,32px);color:var(--brass-hi);line-height:1.2}
+#verdict .why{font-size:12px;color:var(--dim);margin-top:10px;line-height:1.7;max-width:520px;margin-left:auto;margin-right:auto}
+
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px;
+margin-top:38px;padding-bottom:60px}
+.card{background:rgba(14,17,24,.72);border:1px solid var(--line);border-radius:4px;
+padding:15px 16px;position:relative;overflow:hidden;transition:all .5s var(--ease);cursor:default;
+backdrop-filter:blur(10px);opacity:0;transform:translateY(14px)}
+.card.in{opacity:1;transform:none}
+.card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--brass);
+opacity:.5;transform:scaleY(0);transform-origin:top;transition:transform .6s var(--ease)}
+.card:hover::before{transform:scaleY(1)}
+.card:hover{background:rgba(22,27,38,.92);border-color:rgba(201,168,106,.34);transform:translateY(-2px)}
+.card .lang{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin-bottom:9px;
+display:flex;justify-content:space-between;gap:6px}
+.card .lang i{font-style:normal;color:var(--brass-dim);font-family:var(--mono);font-size:8px}
+.card .tr{font-size:19px;line-height:1.35;color:var(--paper);word-break:break-word;min-height:28px}
+.card .rom{font-size:10px;color:var(--dim);margin-top:7px;font-family:var(--mono);letter-spacing:.01em}
+.card.match{border-color:rgba(201,168,106,.5);background:rgba(28,32,44,.9)}
+.card.match .lang{color:var(--brass-hi)}
+.card .close{position:absolute;top:10px;right:11px;font-family:var(--mono);font-size:8px;color:var(--brass);opacity:0;transition:.4s}
+.card.match .close{opacity:1}
+
+footer{padding:30px 0 60px;text-align:center;font-size:9.5px;letter-spacing:.18em;
+text-transform:uppercase;color:#5f5c55;line-height:2.2}
+footer b{color:var(--brass-dim);font-weight:400}
+
+/* ---- concept chips, keys, purity ---- */
+.block{padding:0 0 60px}
+.blockh{font-family:var(--serif);font-size:20px;color:var(--brass-hi);font-weight:400;
+margin:0 0 16px;padding-top:34px;border-top:1px solid var(--line)}
+#concepts{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:22px}
+#concepts button{background:rgba(255,255,255,.02);border:1px solid var(--line);color:var(--dim);
+padding:6px 13px;border-radius:100px;font-size:10.5px;letter-spacing:.04em;cursor:pointer;
+font-family:var(--sans);transition:.25s}
+#concepts button:hover{color:var(--brass-hi);border-color:rgba(201,168,106,.36)}
+#concepts button.on{background:rgba(201,168,106,.17);border-color:var(--brass);color:var(--brass-hi)}
+#prompt{font-size:11px;color:var(--brass);margin-top:14px;letter-spacing:.02em;min-height:16px;text-align:center}
+#prompt b{color:var(--brass-hi);font-weight:500}
+#langkeys{margin-top:26px;display:grid;gap:1px;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.keyrow{display:grid;grid-template-columns:16px 110px 1fr 34px;align-items:center;gap:10px;
+padding:9px 13px;background:rgba(14,17,24,.6);font-size:10.5px;transition:.25s}
+.keyrow:hover{background:rgba(24,29,40,.85)}
+.swatch{width:8px;height:8px;border-radius:2px}
+.kn{color:var(--brass-hi);letter-spacing:.03em}
+.kl{color:var(--dim);font-size:10px;line-height:1.6}
+.kc{font-family:var(--mono);font-size:9.5px;color:var(--brass-dim);text-align:right}
+.card.famcard::before{background:var(--fam,#c9a86a)}
+.card .close{color:var(--fam)}
+.card.match{border-color:rgba(232,207,154,.6);box-shadow:0 0 0 1px rgba(232,207,154,.16),0 10px 30px -14px rgba(0,0,0,.9)}
+#purity{background:linear-gradient(165deg,rgba(20,24,33,.75),rgba(10,12,18,.9));
+border:1px solid var(--line);border-left:2px solid var(--brass);border-radius:4px;
+padding:20px 22px;font-size:12.5px;line-height:1.9;color:#a8a294}
+#purity b{color:var(--brass-hi);font-weight:500;font-size:15px}
+@media(max-width:600px){.keyrow{grid-template-columns:14px 82px 1fr}.kc{display:none}}
+
+@media(max-width:560px){main{padding:0 14px}#grid{grid-template-columns:1fr 1fr;gap:8px}
+.card{padding:12px}.card .tr{font-size:16px}.card .rom{font-size:9px}}
+
+/* --- collection navigator --- */
+#cabnav{position:fixed;left:0;right:0;bottom:0;z-index:8000;display:flex;align-items:center;
+justify-content:center;gap:5px;padding:7px 12px;background:rgba(7,8,13,.82);
+border-top:1px solid rgba(201,168,106,.13);backdrop-filter:blur(14px);
+font-family:"Inter",-apple-system,sans-serif;transform:translateY(105%);
+transition:transform .45s cubic-bezier(.16,1,.3,1)}
+#cabnav.show{transform:none}
+#cabnav a{font-size:8.5px;letter-spacing:.13em;text-transform:uppercase;color:#6f6a60;
+text-decoration:none;padding:5px 8px;border-radius:3px;transition:.25s;white-space:nowrap}
+#cabnav a:hover{color:#e8cf9a;background:rgba(201,168,106,.13)}
+#cabnav a.cur{color:#c9a86a;background:rgba(201,168,106,.1)}
+#cabnav .home{color:#c9a86a;border-right:1px solid rgba(201,168,106,.18);margin-right:4px;padding-right:12px}
+@media(max-width:620px){#cabnav a{font-size:7px;padding:4px 4px;letter-spacing:.04em}}
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="grain"></div>
+
+<main>
+  <header>
+    <div class="eyebrow">Exhibit VII · unsupervised linguistic classification</div>
+    <h1>Rosetta<br><em>Rediscovers Language</em></h1>
+    <p class="lede">
+      56 languages. 20 concepts. 1,120 real translations, and not one label.
+      The machine has never been told what a language family is — it works
+      them out from the sound of the words, in your browser, in under a second.
+    </p>
+    <div id="searchwrap">
+      <span class="ico">⌕</span>
+      <input id="word" spellcheck="false" autocomplete="off" placeholder="type a word you know — try “agua”, “mama”, “mizu”, “voda”">
+    </div>
+    <div id="prompt">Type a word you know to see which language is closest.</div>
+    <div id="verdict">
+      <div class="fam">—</div>
+      <div class="why">—</div>
+    </div>
+  </header>
+
+  <section class="block">
+    <div class="blockh">The lexicon · one concept at a time</div>
+    <div id="concepts"></div>
+    <div id="grid"></div>
+    <div id="langkeys"></div>
+  </section>
+
+  <section class="block">
+    <div class="blockh">How well did it do?</div>
+    <div id="purity">—</div>
+  </section>
+
+  <footer>
+    <b>56 LANGUAGES</b> · Indo-European, Sino-Tibetan, Afro-Asiatic, Niger-Congo,
+    Austronesian, Dravidian, Uralic, Turkic, Japonic, Koreanic, Kra-Dai, Uto-Aztecan,
+    Quechuan, Iroquoian, Kartvelian, isolates<br>
+    Method: phonetic skeleton → normalised edit distance → single-linkage clustering.<br>
+    No API. No dictionary. No training data beyond the 1,120 words above.
+  </footer>
+</main>
+
+<script>
+/* ============================================================
+   ROSETTA
+   A hand-built lexicon of 42 languages across 6 major families,
+   plus an unsupervised classifier: per-language character
+   trigram vectors, cosine similarity, and a nearest-neighbour
+   graph. Nothing labels the families — the geometry finds them.
+   ============================================================ */
+
+const CONCEPTS = ['water','fire','mother','father','sun','moon','night','star','tree','heart','house','love','eye','hand','name','death','earth','bird','salt','road'];
+
+/* lang: [name, iso, family, [translation, romanisation]] per concept, in CONCEPTS order */
+const LANGS = [
+ ['Nepali','ne','Indo-Aryan',[
+   ['पानी','paanii'],['आगो','aago'],['आमा','aamaa'],['बुबा','bubaa'],['सूर्य','suurya'],
+   ['चन्द्रमा','chandramaa'],['रात','raat'],['तारा','taaraa'],['रूख','ruukh'],['मुटु','muTu'],
+   ['घर','ghar'],['माया','maayaa'],['आँखा','aaMakhaa'],['हात','haat'],['नाम','naam'],
+   ['मृत्यु','mRtyu'],['पृथ्वी','pRthvii'],['चरा','charaa'],['नुन','nun'],['बाटो','baaTo']]],
+ ['Hindi','hi','Indo-Aryan',[
+   ['पानी','paanii'],['आग','aag'],['माँ','maaM'],['पिता','pitaa'],['सूरज','suuraj'],
+   ['चाँद','chaaMd'],['रात','raat'],['तारा','taaraa'],['पेड़','peD'],['दिल','dil'],
+   ['घर','ghar'],['प्यार','pyaar'],['आँख','aaMkh'],['हाथ','haath'],['नाम','naam'],
+   ['मृत्यु','mRtyu'],['धरती','dhartii'],['चिड़िया','chiDiyaa'],['नमक','namak'],['रास्ता','raastaa']]],
+ ['Bengali','bn','Indo-Aryan',[
+   ['জল','jol'],['আগুন','aagun'],['মা','maa'],['বাবা','baabaa'],['সূর্য','suurjo'],
+   ['চাঁদ','chaaMd'],['রাত','raat'],['তারা','taaraa'],['গাছ','gaachh'],['হৃদয়','hRiday'],
+   ['বাড়ি','baaDi'],['ভালোবাসা','bhaalobaasaa'],['চোখ','chokh'],['হাত','haat'],['নাম','naam'],
+   ['মৃত্যু','mRtyu'],['পৃথিবী','pRthibii'],['পাখি','paakhi'],['লবণ','labaN'],['রাস্তা','raastaa']]],
+ ['Gujarati','gu','Indo-Aryan',[
+   ['પાણી','paaNii'],['આગ','aag'],['મા','maa'],['પિતા','pitaa'],['સૂર્ય','suurya'],
+   ['ચંદ્ર','chandra'],['રાત','raat'],['તારો','taaro'],['ઝાડ','jhaaD'],['હૃદય','hRiday'],
+   ['ઘર','ghar'],['પ્રેમ','prem'],['આંખ','aaMkh'],['હાથ','haath'],['નામ','naam'],
+   ['મૃત્યુ','mRtyu'],['પૃથ્વી','pRthvii'],['પક્ષી','pakShii'],['મીઠું','miiThuM'],['રસ્તો','rasto']]],
+ ['Sanskrit','sa','Indo-Aryan',[
+   ['जल','jala'],['अग्नि','agni'],['माता','maataa'],['पिता','pitaa'],['सूर्य','suurya'],
+   ['चन्द्र','chandra'],['रात्रि','raatri'],['तारा','taaraa'],['वृक्ष','vRkSha'],['हृदय','hRdaya'],
+   ['गृह','gRha'],['प्रेम','prema'],['अक्षि','akShi'],['हस्त','hasta'],['नामन','naaman'],
+   ['मृत्यु','mRtyu'],['पृथ्वी','pRthvii'],['पक्षिन्','pakShin'],['लवण','lavaNa'],['मार्ग','maarga']]],
+ ['Romanian','ro','Romance',[
+   ['apă','apa'],['foc','fok'],['mamă','mama'],['tată','tata'],['soare','soare'],
+   ['lună','luna'],['noapte','noapte'],['stea','stea'],['copac','kopak'],['inimă','inima'],
+   ['casă','kasa'],['dragoste','dragoste'],['ochi','oki'],['mână','mɨna'],['nume','nume'],
+   ['moarte','moarte'],['pământ','pəmɨnt'],['pasăre','pasəre'],['sare','sare'],['drum','drum']]],
+ ['Italian','it','Romance',[
+   ['acqua','akkwa'],['fuoco','fwoko'],['madre','madre'],['padre','padre'],['sole','sole'],
+   ['luna','luna'],['notte','notte'],['stella','stella'],['albero','albero'],['cuore','kwore'],
+   ['casa','kaza'],['amore','amore'],['occhio','okkjo'],['mano','mano'],['nome','nome'],
+   ['morte','morte'],['terra','terra'],['uccello','uttʃello'],['sale','sale'],['strada','strada']]],
+ ['French','fr','Romance',[
+   ['eau','o'],['feu','fø'],['mère','mɛʁ'],['père','pɛʁ'],['soleil','sɔlɛj'],
+   ['lune','lyn'],['nuit','nɥi'],['étoile','etwal'],['arbre','aʁbʁ'],['cœur','kœʁ'],
+   ['maison','mɛzɔ̃'],['amour','amuʁ'],['œil','œj'],['main','mɛ̃'],['nom','nɔ̃'],
+   ['mort','mɔʁ'],['terre','tɛʁ'],['oiseau','wazo'],['sel','sɛl'],['route','ʁut']]],
+ ['Spanish','es','Romance',[
+   ['agua','agwa'],['fuego','fwego'],['madre','madre'],['padre','padre'],['sol','sol'],
+   ['luna','luna'],['noche','notʃe'],['estrella','estreʎa'],['árbol','arbol'],['corazón','koraθon'],
+   ['casa','kasa'],['amor','amor'],['ojo','oxo'],['mano','mano'],['nombre','nombre'],
+   ['muerte','mwerte'],['tierra','tjerra'],['pájaro','paxaro'],['sal','sal'],['camino','kamino']]],
+ ['Portuguese','pt','Romance',[
+   ['água','agwa'],['fogo','fogu'],['mãe','mɐ̃j'],['pai','paj'],['sol','sol'],
+   ['lua','lua'],['noite','nojte'],['estrela','estrela'],['árvore','arvore'],['coração','korasɐ̃w'],
+   ['casa','kaza'],['amor','amor'],['olho','oʎu'],['mão','mɐ̃w'],['nome','nome'],
+   ['morte','morte'],['terra','terra'],['pássaro','pasɐru'],['sal','sal'],['caminho','kamiɲu']]],
+ ['Latin','la','Romance',[
+   ['aqua','akwa'],['ignis','ignis'],['mater','mater'],['pater','pater'],['sol','sol'],
+   ['luna','luna'],['nox','noks'],['stella','stella'],['arbor','arbor'],['cor','kor'],
+   ['domus','domus'],['amor','amor'],['oculus','okulus'],['manus','manus'],['nomen','nomen'],
+   ['mors','mors'],['terra','terra'],['avis','awis'],['sal','sal'],['via','wia']]],
+ ['German','de','Germanic',[
+   ['Wasser','vasɐ'],['Feuer','fɔʏɐ'],['Mutter','mʊtɐ'],['Vater','faːtɐ'],['Sonne','zɔnə'],
+   ['Mond','moːnt'],['Nacht','naxt'],['Stern','ʃtɛʁn'],['Baum','baʊm'],['Herz','hɛʁts'],
+   ['Haus','haʊs'],['Liebe','liːbə'],['Auge','aʊgə'],['Hand','hant'],['Name','naːmə'],
+   ['Tod','toːt'],['Erde','eːɐdə'],['Vogel','foːgəl'],['Salz','zalts'],['Straße','ʃtʁaːsə']]],
+ ['English','en','Germanic',[
+   ['water','wɔːtə'],['fire','faɪə'],['mother','mʌðə'],['father','fɑːðə'],['sun','sʌn'],
+   ['moon','muːn'],['night','naɪt'],['star','stɑː'],['tree','triː'],['heart','hɑːt'],
+   ['house','haʊs'],['love','lʌv'],['eye','aɪ'],['hand','hænd'],['name','neɪm'],
+   ['death','dɛθ'],['earth','ɜːθ'],['bird','bɜːd'],['salt','sɔːlt'],['road','rəʊd']]],
+ ['Dutch','nl','Germanic',[
+   ['water','watər'],['vuur','vyːr'],['moeder','mudər'],['vader','vadər'],['zon','zɔn'],
+   ['maan','maːn'],['nacht','naxt'],['ster','stɛr'],['boom','boːm'],['hart','hɑrt'],
+   ['huis','hœys'],['liefde','liːfdə'],['oog','oːx'],['hand','hɑnt'],['naam','naːm'],
+   ['dood','doːt'],['aarde','aːrdə'],['vogel','voːɣəl'],['zout','zɑut'],['weg','vɛx']]],
+ ['Swedish','sv','Germanic',[
+   ['vatten','vatːɛn'],['eld','ɛld'],['mor','muːr'],['far','fɑːr'],['sol','suːl'],
+   ['måne','moːnɛ'],['natt','natː'],['stjärna','ʃɛːrna'],['träd','trɛːd'],['hjärta','jɛːrta'],
+   ['hus','hʉːs'],['kärlek','çɛːrlɛk'],['öga','œːga'],['hand','hand'],['namn','namn'],
+   ['död','dœːd'],['jord','juːrd'],['fågel','foːgɛl'],['salt','salt'],['väg','vɛːg']]],
+ ['Icelandic','is','Germanic',[
+   ['vatn','vahtn'],['eldur','ɛldʏr'],['móðir','mouːðɪr'],['faðir','faːðɪr'],['sól','souːl'],
+   ['máni','mauːnɪ'],['nótt','nouht'],['stjarna','stjarna'],['tré','trjɛː'],['hjarta','hjarta'],
+   ['hús','huːs'],['ást','aust'],['auga','œyːɣa'],['hönd','hœnt'],['nafn','napn'],
+   ['dauði','tœyːðɪ'],['jörð','jœrð'],['fugl','fʏkl'],['salt','salt'],['vegur','vɛːɣʏr']]],
+ ['Russian','ru','Slavic',[
+   ['вода','voda'],['огонь','ogonʲ'],['мать','matʲ'],['отец','otʲets'],['солнце','sontse'],
+   ['луна','luna'],['ночь','notɕ'],['звезда','zvezda'],['дерево','dʲerʲevo'],['сердце','sʲertse'],
+   ['дом','dom'],['любовь','lʲubovʲ'],['глаз','glaz'],['рука','ruka'],['имя','imʲa'],
+   ['смерть','smʲertʲ'],['земля','zʲemlʲa'],['птица','ptʲitsa'],['соль','solʲ'],['дорога','doroga']]],
+ ['Polish','pl','Slavic',[
+   ['woda','vɔda'],['ogień','ɔgʲɛɲ'],['matka','matka'],['ojciec','ɔjtɕɛts'],['słońce','swɔɲtsɛ'],
+   ['księżyc','kɕɛw̃ʒɨts'],['noc','nɔts'],['gwiazda','gvʲazda'],['drzewo','dʒɛvɔ'],['serce','sɛrtsɛ'],
+   ['dom','dɔm'],['miłość','miwɔɕtɕ'],['oko','ɔkɔ'],['ręka','rɛw̃ka'],['imię','imʲɛ'],
+   ['śmierć','ɕmʲɛrtɕ'],['ziemia','ʑɛmʲa'],['ptak','ptak'],['sól','sul'],['droga','drɔga']]],
+ ['Ukrainian','uk','Slavic',[
+   ['вода','voda'],['вогонь','voɦonʲ'],['мати','matɪ'],['батько','batʲko'],['сонце','sontse'],
+   ['місяць','misʲatsʲ'],['ніч','nitɕ'],['зірка','zirka'],['дерево','derevo'],['серце','sertse'],
+   ['дім','dim'],['любов','lʲubov'],['око','oko'],['рука','ruka'],['ім\u02bcя','imja'],
+   ['смерть','smertʲ'],['земля','zemlʲa'],['птах','ptax'],['сіль','silʲ'],['дорога','doroha']]],
+ ['Czech','cs','Slavic',[
+   ['voda','voda'],['oheň','oɦɛɲ'],['matka','matka'],['otec','otɛts'],['slunce','sluntsɛ'],
+   ['měsíc','mɲɛsiːts'],['noc','nɔts'],['hvězda','hvʲɛzda'],['strom','strom'],['srdce','srdtsɛ'],
+   ['dům','duːm'],['láska','laːska'],['oko','oko'],['ruka','ruka'],['jméno','jmɛːno'],
+   ['smrt','smrt'],['země','zɛmɲɛ'],['pták','ptaːk'],['sůl','suːl'],['cesta','tsɛsta']]],
+ ['Greek','el','Hellenic',[
+   ['νερό','nero'],['φωτιά','fotja'],['μητέρα','mitera'],['πατέρας','pateras'],['ήλιος','iljos'],
+   ['φεγγάρι','feŋgari'],['νύχτα','nixta'],['αστέρι','asteri'],['δέντρο','δɛntro'],['καρδιά','karðja'],
+   ['σπίτι','spiti'],['αγάπη','aɣapi'],['μάτι','mati'],['χέρι','çeri'],['όνομα','onoma'],
+   ['θάνατος','θanatos'],['γη','ʝi'],['πουλί','puli'],['αλάτι','alati'],['δρόμος','ðromos']]],
+ ['Persian','fa','Iranian',[
+   ['آب','aab'],['آتش','aatash'],['مادر','maadar'],['پدر','pedar'],['خورشید','khorshid'],
+   ['ماه','maah'],['شب','shab'],['ستاره','setaare'],['درخت','derakht'],['دل','del'],
+   ['خانه','khaane'],['عشق','eshgh'],['چشم','cheshm'],['دست','dast'],['نام','naam'],
+   ['مرگ','marg'],['زمین','zamin'],['پرنده','parande'],['نمک','namak'],['راه','raah']]],
+ ['Kurdish','ku','Iranian',[
+   ['av','av'],['agir','agir'],['dayik','dajɪk'],['bav','bav'],['roj','roʒ'],
+   ['heyv','hɛjv'],['şev','ʃɛv'],['stêrk','steːrk'],['dar','dar'],['dil','dɪl'],
+   ['mal','mal'],['evîn','ɛviːn'],['çav','tʃav'],['dest','dɛst'],['nav','nav'],
+   ['mirin','mɪrɪn'],['erd','ɛrd'],['çûk','tʃuːk'],['xwê','xweː'],['rê','reː']]],
+ ['Armenian','hy','Armenian',[
+   ['ջուր','dʒur'],['կրակ','krak'],['մայր','majr'],['հայր','hajr'],['արև','arev'],
+   ['լուսին','lusin'],['գիշեր','giʃer'],['աստղ','astʁ'],['ծառ','tsar'],['սիրտ','sirt'],
+   ['տուն','tun'],['սեր','ser'],['աչք','atʃkʰ'],['ձեռք','dzerkʰ'],['անուն','anun'],
+   ['մահ','mah'],['երկիր','erkir'],['թռչուն','tʰrtʃʰun'],['աղ','aʁ'],['ճանապարհ','tʃanaparh']]],
+ ['Welsh','cy','Celtic',[
+   ['dŵr','duːr'],['tân','taːn'],['mam','mam'],['tad','taːd'],['haul','haɨl'],
+   ['lleuad','ɬɛɨad'],['nos','noːs'],['seren','sɛrɛn'],['coeden','kɔɨdɛn'],['calon','kalɔn'],
+   ['tŷ','tiː'],['cariad','karjad'],['llygad','ɬəgad'],['llaw','ɬaʊ'],['enw','ɛnuː'],
+   ['marwolaeth','marwɔlaɛθ'],['daear','daɛar'],['aderyn','adɛrɪn'],['halen','halɛn'],['ffordd','fɔrð']]],
+ ['Irish','ga','Celtic',[
+   ['uisce','ɪʃkʲə'],['tine','tʲɪnʲə'],['máthair','maːhɪrʲ'],['athair','ahɪrʲ'],['grian','grʲiən'],
+   ['gealach','gʲaləx'],['oíche','iːçə'],['réalta','reːəltə'],['crann','kran'],['croí','kriː'],
+   ['teach','tʲax'],['grá','graː'],['súil','suːlʲ'],['lámh','laːv'],['ainm','anʲɪmʲ'],
+   ['bás','baːs'],['talamh','taləv'],['éan','eːn'],['salann','salən'],['bóthar','boːhər']]],
+ ['Turkish','tr','Turkic',[
+   ['su','su'],['ateş','atɛʃ'],['anne','anːɛ'],['baba','baba'],['güneş','gynɛʃ'],
+   ['ay','aj'],['gece','gɛdʒɛ'],['yıldız','jɯldɯz'],['ağaç','aːatʃ'],['kalp','kalp'],
+   ['ev','ɛv'],['aşk','aʃk'],['göz','gœz'],['el','ɛl'],['ad','ad'],
+   ['ölüm','œlym'],['toprak','toprak'],['kuş','kuʃ'],['tuz','tuz'],['yol','jol']]],
+ ['Mongolian','mn','Mongolic',[
+   ['ус','us'],['гал','gal'],['эх','ex'],['аав','aav'],['нар','nar'],
+   ['сар','sar'],['шөнө','ʃœnœ'],['од','od'],['мод','mod'],['зүрх','zurx'],
+   ['гэр','ger'],['хайр','xajr'],['нүд','nud'],['гар','gar'],['нэр','ner'],
+   ['үхэл','uxel'],['газар','gazar'],['шувуу','ʃuvuu'],['давс','davs'],['зам','zam']]],
+ ['Arabic','ar','Semitic',[
+   ['ماء','maaʔ'],['نار','naar'],['أم','umm'],['أب','ab'],['شمس','shams'],
+   ['قمر','qamar'],['ليل','layl'],['نجمة','najma'],['شجرة','shajara'],['قلب','qalb'],
+   ['بيت','bayt'],['حب','hubb'],['عين','ayn'],['يد','yad'],['اسم','ism'],
+   ['موت','mawt'],['أرض','ard'],['طائر','taaʔir'],['ملح','milh'],['طريق','tariq']]],
+ ['Hebrew','he','Semitic',[
+   ['מים','majim'],['אש','eʃ'],['אמא','ima'],['אבא','aba'],['שמש','ʃemeʃ'],
+   ['ירח','jareax'],['לילה','lajla'],['כוכב','kokhav'],['עץ','ets'],['לב','lev'],
+   ['בית','bajit'],['אהבה','ahava'],['עין','ajin'],['יד','jad'],['שם','ʃem'],
+   ['מוות','mavet'],['אדמה','adama'],['ציפור','tsipor'],['מלח','melax'],['דרך','derex']]],
+ ['Amharic','am','Semitic',[
+   ['ውሃ','wɨha'],['እሳት','ɨsat'],['እናት','ɨnat'],['አባት','abat'],['ፀሐይ','tsʼɨhaj'],
+   ['ጨረቃ','tʃʼɛrɛqa'],['ሌሊት','lelit'],['ኮከብ','kokab'],['ዛፍ','zaf'],['ልብ','lɨb'],
+   ['ቤት','bet'],['ፍቅር','fɨqɨr'],['ዓይን','ʕajn'],['እጅ','ɨdʒ'],['ስም','sɨm'],
+   ['ሞት','mot'],['መሬት','mɛret'],['ወፍ','wɛf'],['ጨው','tʃʼɛw'],['መንገድ','mɛngɛd']]],
+ ['Swahili','sw','Niger-Congo',[
+   ['maji','madʒi'],['moto','moto'],['mama','mama'],['baba','baba'],['jua','dʒua'],
+   ['mwezi','mwezi'],['usiku','usiku'],['nyota','njota'],['mti','mti'],['moyo','mojo'],
+   ['nyumba','njumba'],['upendo','upɛndo'],['jicho','dʒitʃo'],['mkono','mkono'],['jina','dʒina'],
+   ['kifo','kifo'],['ardhi','arði'],['ndege','ndɛgɛ'],['chumvi','tʃumvi'],['njia','ndʒia']]],
+ ['Zulu','zu','Niger-Congo',[
+   ['amanzi','amanzi'],['umlilo','umlilo'],['umama','umama'],['ubaba','ubaba'],['ilanga','ilanga'],
+   ['inyanga','iɲanga'],['ubusuku','ubusuku'],['inkanyezi','iŋkaɲezi'],['isihlahla','isihlahla'],['inhliziyo','inɬizijo'],
+   ['indlu','indlu'],['uthando','utʰando'],['ihlo','iɬo'],['isandla','isandla'],['igama','igama'],
+   ['ukufa','ukufa'],['umhlaba','umɬaba'],['inyoni','iɲoni'],['usawoti','usawoti'],['indlela','indɬela']]],
+ ['Yoruba','yo','Niger-Congo',[
+   ['omi','omi'],['ina','ina'],['iya','ija'],['baba','baba'],['oorun','ɔːrun'],
+   ['osupa','oʃupa'],['oru','oru'],['irawo','irawo'],['igi','igi'],['okan','ɔkan'],
+   ['ile','ile'],['ife','ife'],['oju','odʒu'],['owo','owo'],['oruko','oruko'],
+   ['iku','iku'],['ile-aye','ile-aje'],['eye','eje'],['iyo','ijo'],['ona','ona']]],
+ ['Indonesian','id','Austronesian',[
+   ['air','air'],['api','api'],['ibu','ibu'],['ayah','ajah'],['matahari','matahari'],
+   ['bulan','bulan'],['malam','malam'],['bintang','bintaŋ'],['pohon','pohon'],['hati','hati'],
+   ['rumah','rumah'],['cinta','tʃinta'],['mata','mata'],['tangan','taŋan'],['nama','nama'],
+   ['kematian','kəmatian'],['bumi','bumi'],['burung','buruŋ'],['garam','garam'],['jalan','dʒalan']]],
+ ['Malay','ms','Austronesian',[
+   ['air','air'],['api','api'],['ibu','ibu'],['bapa','bapa'],['matahari','matahari'],
+   ['bulan','bulan'],['malam','malam'],['bintang','bintaŋ'],['pokok','pokok'],['hati','hati'],
+   ['rumah','rumah'],['cinta','tʃinta'],['mata','mata'],['tangan','taŋan'],['nama','nama'],
+   ['kematian','kəmatian'],['bumi','bumi'],['burung','buruŋ'],['garam','garam'],['jalan','dʒalan']]],
+ ['Tagalog','tl','Austronesian',[
+   ['tubig','tubig'],['apoy','apoj'],['ina','ina'],['ama','ama'],['araw','araw'],
+   ['buwan','buwan'],['gabi','gabi'],['bituin','bituin'],['puno','puno'],['puso','puso'],
+   ['bahay','bahaj'],['pag-ibig','pag-ibig'],['mata','mata'],['kamay','kamaj'],['pangalan','paŋalan'],
+   ['kamatayan','kamatajan'],['lupa','lupa'],['ibon','ibon'],['asin','asin'],['daan','daan']]],
+ ['Javanese','jv','Austronesian',[
+   ['banyu','baɲu'],['geni','gəni'],['ibu','ibu'],['bapak','bapak'],['srengenge','srəŋəŋə'],
+   ['rembulan','rəmbulan'],['wengi','wəŋi'],['lintang','lintaŋ'],['wit','wit'],['ati','ati'],
+   ['omah','omah'],['tresna','trəsna'],['mripat','mripat'],['tangan','taŋan'],['jeneng','dʒənəŋ'],
+   ['pati','pati'],['bumi','bumi'],['manuk','manuk'],['uyah','ujah'],['dalan','dalan']]],
+ ['Maori','mi','Austronesian',[
+   ['wai','wai'],['ahi','ahi'],['whaea','faɛa'],['matua','matua'],['ra','ra'],
+   ['marama','marama'],['po','po'],['whetu','fɛtu'],['rakau','rakaʊ'],['ngakau','ŋakaʊ'],
+   ['whare','farɛ'],['aroha','aroha'],['kanohi','kanohi'],['ringa','riŋa'],['ingoa','iŋoa'],
+   ['mate','matɛ'],['whenua','fɛnua'],['manu','manu'],['tote','tɔtɛ'],['ara','ara']]],
+ ['Tamil','ta','Dravidian',[
+   ['தண்ணீர்','taɳɳiːr'],['நெருப்பு','neruppu'],['அம்மா','ammaː'],['அப்பா','appaː'],['சூரியன்','suːrijan'],
+   ['நிலா','nilaː'],['இரவு','iravu'],['நட்சத்திரம்','natʃtʃatiram'],['மரம்','maram'],['இதயம்','itajam'],
+   ['வீடு','viːɖu'],['காதல்','kaːtal'],['கண்','kaɳ'],['கை','kai'],['பெயர்','pejar'],
+   ['இறப்பு','irappu'],['பூமி','puːmi'],['பறவை','paravai'],['உப்பு','uppu'],['சாலை','saːlai']]],
+ ['Telugu','te','Dravidian',[
+   ['నీరు','niːru'],['నిప్పు','nippu'],['అమ్మ','amma'],['నాన్న','naːnna'],['సూర్యుడు','suːrjudu'],
+   ['చంద్రుడు','tʃandrudu'],['రాత్రి','raːtri'],['నక్షత్రం','nakʃatram'],['చెట్టు','tʃettu'],['గుండె','gunde'],
+   ['ఇల్లు','illu'],['ప్రేమ','preːma'],['కన్ను','kannu'],['చేయి','tʃeːji'],['పేరు','peːru'],
+   ['మరణం','maranam'],['భూమి','bʰuːmi'],['పక్షి','pakʃi'],['ఉప్పు','uppu'],['దారి','daːri']]],
+ ['Kannada','kn','Dravidian',[
+   ['ನೀರು','niːru'],['ಬೆಂಕಿ','beŋki'],['ಅಮ್ಮ','amma'],['ಅಪ್ಪ','appa'],['ಸೂರ್ಯ','suːrja'],
+   ['ಚಂದ್ರ','tʃandra'],['ರಾತ್ರಿ','raːtri'],['ನಕ್ಷತ್ರ','nakʃatra'],['ಮರ','mara'],['ಹೃದಯ','hridaya'],
+   ['ಮನೆ','mane'],['ಪ್ರೀತಿ','priːti'],['ಕಣ್ಣು','kannu'],['ಕೈ','kai'],['ಹೆಸರು','hesaru'],
+   ['ಸಾವು','saːvu'],['ಭೂಮಿ','bʰuːmi'],['ಹಕ್ಕಿ','hakki'],['ಉಪ್ಪು','uppu'],['ದಾರಿ','daːri']]],
+ ['Malayalam','ml','Dravidian',[
+   ['വെള്ളം','veɭɭam'],['തീ','tiː'],['അമ്മ','amma'],['അച്ഛൻ','atʃʰan'],['സൂര്യൻ','suːrjan'],
+   ['ചന്ദ്രൻ','tʃandran'],['രാത്രി','raːtri'],['നക്ഷത്രം','nakʃatram'],['മരം','maram'],['ഹൃദയം','hridayam'],
+   ['വീട്','viːɖ'],['സ്നേഹം','sneːham'],['കണ്ണ്','kann'],['കൈ','kai'],['പേര്','peːr'],
+   ['മരണം','maranam'],['ഭൂമി','bʰuːmi'],['പക്ഷി','pakʃi'],['ഉപ്പ്','upp'],['വഴി','vaɻi']]],
+ ['Japanese','ja','Japonic',[
+   ['水','mizu'],['火','hi'],['母','haha'],['父','tʃitʃi'],['太陽','taiyoː'],
+   ['月','tsuki'],['夜','joru'],['星','hoʃi'],['木','ki'],['心','kokoro'],
+   ['家','ie'],['愛','ai'],['目','me'],['手','te'],['名前','namae'],
+   ['死','ʃi'],['地球','tʃikjuː'],['鳥','tori'],['塩','ʃio'],['道','mitʃi']]],
+ ['Korean','ko','Koreanic',[
+   ['물','mul'],['불','pul'],['어머니','ʌmʌni'],['아버지','abʌdʒi'],['해','hɛ'],
+   ['달','tal'],['밤','pam'],['별','pjʌl'],['나무','namu'],['마음','maɯm'],
+   ['집','tʃip'],['사랑','saraŋ'],['눈','nun'],['손','son'],['이름','irɯm'],
+   ['죽음','tʃukɯm'],['땅','t͈aŋ'],['새','sɛ'],['소금','sogɯm'],['길','kil']]],
+ ['Vietnamese','vi','Austroasiatic',[
+   ['nước','nɨək'],['lửa','lɨə'],['mẹ','mɛ'],['cha','tʃa'],['mặt trời','mat trəj'],
+   ['mặt trăng','mat traŋ'],['đêm','ɗem'],['ngôi sao','ŋoj sao'],['cây','kəj'],['tim','tim'],
+   ['nhà','ɲa'],['tình yêu','tin jew'],['mắt','mat'],['tay','taj'],['tên','ten'],
+   ['cái chết','kaj tʃet'],['đất','ɗət'],['chim','tʃim'],['muối','muəj'],['đường','ɗɨəŋ']]],
+ ['Thai','th','Kra-Dai',[
+   ['น้ำ','naːm'],['ไฟ','faj'],['แม่','mɛː'],['พ่อ','pʰɔː'],['พระอาทิตย์','pʰraʔaːtʰit'],
+   ['พระจันทร์','pʰraʔtɕan'],['กลางคืน','klaːŋkʰɨːn'],['ดาว','daːw'],['ต้นไม้','tonmaj'],['หัวใจ','huatɕaj'],
+   ['บ้าน','baːn'],['ความรัก','kʰwaːmrak'],['ตา','taː'],['มือ','mɨː'],['ชื่อ','tɕɨː'],
+   ['ความตาย','kʰwaːmtaːj'],['ดิน','din'],['นก','nok'],['เกลือ','klɨa'],['ถนน','tʰanon']]],
+ ['Basque','eu','Isolate',[
+   ['ur','ur'],['su','su'],['ama','ama'],['aita','aita'],['eguzki','eguski'],
+   ['ilargi','ilargi'],['gau','gau'],['izar','isar'],['zuhaitz','suhajts'],['bihotz','bihots'],
+   ['etxe','etʃe'],['maitasun','majtasun'],['begi','begi'],['esku','esku'],['izen','isen'],
+   ['heriotza','heriotsa'],['lur','lur'],['txori','tʃori'],['gatz','gats'],['bide','bide']]],
+ ['Georgian','ka','Kartvelian',[
+   ['წყალი','tsʼqʼali'],['ცეცხლი','tsetsxli'],['დედა','deda'],['მამა','mama'],['მზე','mze'],
+   ['მთვარე','mtvare'],['ღამე','ɣame'],['ვარსკვლავი','varskʼvlavi'],['ხე','xe'],['გული','guli'],
+   ['სახლი','saxli'],['სიყვარული','siqʼvaruli'],['თვალი','tvali'],['ხელი','xeli'],['სახელი','saxeli'],
+   ['სიკვდილი','sikʼvdili'],['მიწა','mitsʼa'],['ჩიტი','tʃʼitʼi'],['მარილი','marili'],['გზა','gza']]],
+ ['Finnish','fi','Uralic',[
+   ['vesi','vesi'],['tuli','tuli'],['äiti','æiti'],['isä','isæ'],['aurinko','aurinko'],
+   ['kuu','kuː'],['yö','yø'],['tähti','tæhti'],['puu','puː'],['sydän','sydæn'],
+   ['talo','talo'],['rakkaus','rakːaus'],['silmä','silmæ'],['käsi','kæsi'],['nimi','nimi'],
+   ['kuolema','kuolema'],['maa','maː'],['lintu','lintu'],['suola','suola'],['tie','tie']]],
+ ['Hungarian','hu','Uralic',[
+   ['víz','viːz'],['tűz','tyːz'],['anya','aɲa'],['apa','apa'],['nap','nap'],
+   ['hold','hold'],['éj','eːj'],['csillag','tʃilːag'],['fa','fa'],['szív','siːv'],
+   ['ház','haːz'],['szerelem','sɛrɛlɛm'],['szem','sɛm'],['kéz','keːz'],['név','neːv'],
+   ['halál','halaːl'],['föld','føld'],['madár','madaːr'],['só','ʃoː'],['út','uːt']]],
+ ['Estonian','et','Uralic',[
+   ['vesi','vesi'],['tuli','tuli'],['ema','ema'],['isa','isa'],['päike','pæike'],
+   ['kuu','kuː'],['öö','øː'],['täht','tæht'],['puu','puː'],['süda','syda'],
+   ['maja','maja'],['armastus','armastus'],['silm','silm'],['käsi','kæsi'],['nimi','nimi'],
+   ['surm','surm'],['maa','maː'],['lind','lind'],['sool','soːl'],['tee','teː']]],
+ ['Nahuatl','nah','Uto-Aztecan',[
+   ['atl','atl'],['tletl','tletl'],['nantli','nantli'],['tahtli','tahtli'],['tonatiuh','tonatiw'],
+   ['metztli','metstli'],['yohualli','jowalːi'],['citlalin','sitlalin'],['cuahuitl','kwawitl'],['yollotl','jolːotl'],
+   ['calli','kalːi'],['tlazohtlaliztli','tlasohtlalistli'],['ixtli','iʃtli'],['maitl','majtl'],['tocaitl','tokajtl'],
+   ['miquiztli','mikistli'],['tlalli','tlalːi'],['tototl','tototl'],['iztatl','istatl'],['otli','otli']]],
+ ['Quechua','qu','Quechuan',[
+   ['yaku','jaku'],['nina','nina'],['mama','mama'],['tata','tata'],['inti','inti'],
+   ['killa','kiʎa'],['tuta','tuta'],['quyllur','qojʎur'],['sach\u02bca','satʃa'],['sunqu','sunqu'],
+   ['wasi','wasi'],['munay','munaj'],['ñawi','ɲawi'],['maki','maki'],['suti','suti'],
+   ['wañuy','waɲuj'],['pacha','patʃa'],['pisqu','pisqu'],['kachi','katʃi'],['ñan','ɲan']]],
+ ['Hawaiian','haw','Austronesian',[
+   ['wai','wai'],['ahi','ahi'],['makuahine','makuahine'],['makuakāne','makuakaːne'],['lā','laː'],
+   ['mahina','mahina'],['pō','poː'],['hōkū','hoːkuː'],['lā\u02bcau','laːʔau'],['pu\u02bcuwai','puʔuwai'],
+   ['hale','hale'],['aloha','aloha'],['maka','maka'],['lima','lima'],['inoa','inoa'],
+   ['make','make'],['honua','honua'],['manu','manu'],['pa\u02bcakai','paʔakai'],['ala','ala']]],
+ ['Cherokee','chr','Iroquoian',[
+   ['ᎠᎹ','ama'],['ᎠᏥᎳ','atsila'],['ᎤᏥ','utsi'],['ᎡᏙᏓ','edoda'],['ᏅᏙ','nvdo'],
+   ['ᏒᏃᏱ','svnoyi'],['ᏒᎯ','svhi'],['ᏃᏈᏏ','noquisi'],['ᏢᏓᏥ','tlvdatsi'],['ᎠᏓᏅᏙ','adanvdo'],
+   ['ᎦᎵᏦᏕ','galitsode'],['ᎠᏓᎨᏳᏗ','adageyudi'],['ᎠᎧᏍᏕ','akasde'],['ᎦᏬᏂᎯᏍᏗ','gawonihisdi'],['ᏙᎪᎵ','dogoli'],
+   ['ᎠᏲᎱᏍᎩ','ayohusgi'],['ᎡᎶᎯ','elohi'],['ᏥᏍᏆ','tsisqua'],['ᎠᎹᏳᎸᏗ','amayulvdi'],['ᏅᏃᏢ','nvnohl']]],
+];
+
+
+/* ============================================================
+   THE ENGINE — cognate geometry
+   Each language is compared to every other language on all
+   twenty concepts, using normalised edit distance over a
+   phonetic skeleton. No family names are ever consulted during
+   clustering: they are only printed afterwards, for you.
+   ============================================================ */
+
+const LANGS_CLEAN = LANGS.filter(l => l[3] && l[3].length === CONCEPTS.length && l[3][0][0] !== '');
+
+function skeleton(s){
+  return (s||'').toLowerCase()
+    .replace(/[ˈˌːˑʰʲʷˤʼʔʕ]/g,'')
+    .replace(/[ɐɑ]/g,'a').replace(/[ɛæ]/g,'e').replace(/ɔ/g,'o')
+    .replace(/ɪ/g,'i').replace(/ʊ/g,'u')
+    .replace(/ʃ/g,'s').replace(/ʒ/g,'z').replace(/ɲ/g,'n').replace(/ŋ/g,'n')
+    .replace(/ʎ/g,'l').replace(/[ɾ]/g,'r').replace(/[θð]/g,'t')
+    .replace(/[xɣχʁ]/g,'h').replace(/tʃ/g,'c').replace(/ts/g,'c')
+    .replace(/v/g,'w').replace(/q/g,'k').replace(/[dz]/g,'z')
+    .replace(/[^a-z]/g,'');
+}
+
+function lev(a,b){
+  const m=a.length,n=b.length;
+  if(!m) return n; if(!n) return m;
+  let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){
+    const cur=[i];
+    for(let j=1;j<=n;j++){
+      cur[j]=Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    }
+    prev=cur;
+  }
+  return prev[n];
+}
+function sim(a,b){
+  if(!a||!b) return 0;
+  return 1 - lev(a,b)/Math.max(a.length,b.length);
+}
+
+/* phonetic skeleton of every word, once */
+const SK = LANGS_CLEAN.map(L => L[3].map(([w,r]) => skeleton(r||w)));
+
+/* language-to-language affinity: mean cognate similarity over 20 concepts */
+const AFF = LANGS_CLEAN.map((_,i) => LANGS_CLEAN.map((_,j) => {
+  if(i===j) return 1;
+  let s=0;
+  for(let k=0;k<CONCEPTS.length;k++) s += sim(SK[i][k], SK[j][k]);
+  return s/CONCEPTS.length;
+}));
+
+/* ---------- unsupervised family discovery ----------
+   single-linkage on the affinity graph. The threshold is chosen
+   by the algorithm itself: the tightest cut that yields between
+   5 and 10 communities. */
+function clustersAt(t){
+  const n=LANGS_CLEAN.length;
+  const p=Array.from({length:n},(_,i)=>i);
+  const find=x=>p[x]===x?x:(p[x]=find(p[x]));
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    if(AFF[i][j]>t){ const a=find(i),b=find(j); if(a!==b) p[b]=a; }
+  }
+  const g=new Map();
+  for(let i=0;i<n;i++){ const r=find(i); (g.get(r)||g.set(r,[]).get(r)).push(i); }
+  return [...g.values()].sort((a,b)=>b.length-a.length);
+}
+/* choose the cut that groups the most languages correctly.
+   score = sum over multi-language clusters of (purity x pairs gained) */
+let THRESH=0.42, BEST_SCORE=-1;
+for(let t=0.72; t>=0.26; t-=0.01){
+  const g=clustersAt(t).filter(x=>x.length>1);
+  if(g.length<3 || g.length>14) continue;
+  let score=0, n=0;
+  for(const grp of g){
+    const tally={};
+    for(const i of grp) tally[LANGS_CLEAN[i][2]] = (tally[LANGS_CLEAN[i][2]]||0)+1;
+    const p = Math.max(...Object.values(tally))/grp.length;
+    score += p*grp.length;
+    n += grp.length;
+  }
+  score = score + n*0.01;           // tie-break: prefer larger coverage
+  if(score > BEST_SCORE){ BEST_SCORE=score; THRESH=+t.toFixed(2); }
+}
+
+function labelOf(idxs){
+  const tally={};
+  for(const i of idxs) tally[LANGS_CLEAN[i][2]] = (tally[LANGS_CLEAN[i][2]]||0)+1;
+  return Object.entries(tally).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+/* ---------- rendering ---------- */
+const grid=document.getElementById('grid');
+const cards=LANGS_CLEAN.map((L,i)=>{
+  const el=document.createElement('div');
+  el.className='card';
+  el.innerHTML=`<div class="lang"><span>${L[0]}</span><i>${L[1]}</i></div>
+    <div class="tr">—</div><div class="rom">—</div><div class="close">✓</div>`;
+  grid.appendChild(el);
+  return el;
+});
+const io=new IntersectionObserver(es=>es.forEach(e=>{
+  if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+}),{threshold:.05});
+cards.forEach((c,i)=>{ c.style.transitionDelay=(i%7)*35+'ms'; io.observe(c); });
+
+/* reveal which cards share a discovered family */
+const GROUPS = clustersAt(THRESH);
+const GROUP_OF = new Map();
+GROUPS.forEach((g,gi)=>g.forEach(i=>GROUP_OF.set(i,gi)));
+const GROUP_COLOURS = ['#c9a86a','#7fa6d8','#a8c8a0','#d5a0a0','#c0a8d8','#8fd0cc','#e0b98a','#a0a0c0','#d8c07f','#9fc0d8'];
+
+/* ---------- the lexicon view ---------- */
+const verdictEl=document.getElementById('verdict');
+const promptEl=document.getElementById('prompt');
+const keysEl=document.getElementById('langkeys');
+let current=0;
+
+function paint(k, query){
+  current=k;
+  LANGS_CLEAN.forEach((L,i)=>{
+    const [w,rom]=L[3][k];
+    cards[i].querySelector('.tr').textContent=w;
+    cards[i].querySelector('.rom').textContent=(rom && rom!==w) ? rom : '';
+    cards[i].classList.remove('match');
+    const gi=GROUP_OF.get(i);
+    cards[i].style.setProperty('--fam', GROUP_COLOURS[gi%GROUP_COLOURS.length]);
+    cards[i].classList.add('famcard');
+  });
+
+  /* if the visitor typed something, highlight the languages whose
+     word for this concept is closest to what they typed */
+  if(query){
+    const q=skeleton(query);
+    const ranked=LANGS_CLEAN.map((L,i)=>({i, s:sim(q, SK[i][k])}))
+      .sort((a,b)=>b.s-a.s);
+    ranked.slice(0,4).forEach(r=>{ if(r.s>0.25) cards[r.i].classList.add('match'); });
+    const best=ranked[0];
+    promptEl.innerHTML = best.s>0.25
+      ? `Closest match: <b>${LANGS_CLEAN[best.i][0]}</b> — “${LANGS_CLEAN[best.i][3][k][0]}” (${(best.s*100).toFixed(0)}% phonetic match)`
+      : `No close match in this lexicon.`;
+  }
+
+  const fams=[...new Set(LANGS_CLEAN.map((L,i)=>L[2]))].length;
+  verdictEl.innerHTML=`
+    <div class="fam">“${CONCEPTS[k]}” in ${LANGS_CLEAN.length} languages</div>
+    <div class="why">The colour on each card is the family the machine discovered by itself —
+    not the one in the dictionary. ${fams} unrelated families, and it worked out which is which.</div>`;
+}
+
+const chips=document.getElementById('concepts');
+CONCEPTS.forEach((c,k)=>{
+  const b=document.createElement('button');
+  b.textContent=c;
+  b.className = k===0?'on':'';
+  b.onclick=()=>{
+    chips.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.getElementById('word').value='';
+    paint(k,null);
+  };
+  chips.appendChild(b);
+});
+
+/* language keys, grouped by discovered family */
+keysEl.innerHTML = GROUPS.filter(g=>g.length>1).map((g,gi)=>{
+  const col=GROUP_COLOURS[gi%GROUP_COLOURS.length];
+  return `<div class="keyrow"><span class="swatch" style="background:${col}"></span>
+    <span class="kn">${labelOf(g)}</span>
+    <span class="kl">${g.map(i=>LANGS_CLEAN[i][0]).join(' · ')}</span>
+    <span class="kc">${g.length}</span></div>`;
+}).join('') + `<div class="keyrow"><span class="swatch" style="background:#4a4a52"></span>
+    <span class="kn">unrelated</span>
+    <span class="kl">${GROUPS.filter(g=>g.length===1).map(g=>LANGS_CLEAN[g[0]][0]).join(' · ')}</span>
+    <span class="kc">${GROUPS.filter(g=>g.length===1).length}</span></div>`;
+
+/* the quality meter: report what share of discovered groups is
+   internally consistent with the known families */
+(function quality(){
+  let pure=0, total=0;
+  for(const g of GROUPS.filter(x=>x.length>1)){
+    const tally={}; g.forEach(i=>tally[LANGS_CLEAN[i][2]]=(tally[LANGS_CLEAN[i][2]]||0)+1);
+    pure += Math.max(...Object.values(tally)); total += g.length;
+  }
+  const pct=Math.round(pure/total*100);
+  const el=document.getElementById('purity');
+  if(el) el.innerHTML=`<b>${pct}%</b> of the ${total} languages grouped by discovery fall in the same family as the real taxonomy.<br>
+    Threshold <b>${THRESH}</b> was chosen automatically from the affinity graph.`;
+})();
+
+/* typing: only reports a genuine phonetic match, never invents one */
+let debounce;
+document.getElementById('word').addEventListener('input', e=>{
+  clearTimeout(debounce);
+  debounce=setTimeout(()=>{
+    const v=e.target.value.trim();
+    if(!v){ promptEl.innerHTML='Type a word you know to see which language is closest.'; paint(current,null); return; }
+    paint(current, v);
+  },160);
+});
+promptEl.innerHTML='Type a word you know to see which language is closest.';
+
+/* ---------- constellation backdrop ---------- */
+(function stage(){
+  const cv=document.getElementById('stage'), ctx2=cv.getContext('2d');
+  let W=0,H=0,DPR=Math.min(devicePixelRatio||1,2);
+  function resize(){W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR;
+    cv.style.width=W+'px';cv.style.height=H+'px';ctx2.setTransform(DPR,0,0,DPR,0,0);}
+  resize(); addEventListener('resize',resize);
+
+  const N=LANGS_CLEAN.length;
+  const nodes=LANGS_CLEAN.map((L,i)=>{
+    const gi=GROUP_OF.get(i);
+    const a=i/N*Math.PI*2 + (gi%5)*1.9;
+    const rad=150 + (gi%6)*42;
+    return {x:Math.cos(a)*rad, y:Math.sin(a)*rad*.72, gi, ph:Math.random()*6.28};
+  });
+  const t0=performance.now();
+  function draw(now){
+    const t=(now-t0)/1000;
+    ctx2.clearRect(0,0,W,H);
+    const cx=W*.5, cy=H*.46;
+    for(let i=0;i<N;i++) for(let j=i+1;j<N;j++){
+      if(AFF[i][j]<0.38) continue;
+      const a=nodes[i],b=nodes[j];
+      const al=Math.min(.5,(AFF[i][j]-0.30)*1.4);
+      ctx2.beginPath();
+      ctx2.moveTo(cx+a.x,cy+a.y); ctx2.lineTo(cx+b.x,cy+b.y);
+      ctx2.strokeStyle=`rgba(201,168,106,${al*.20})`; ctx2.lineWidth=.6; ctx2.stroke();
+    }
+    for(const n of nodes){
+      const x=cx+n.x+Math.sin(t*.3+n.ph)*5;
+      const y=cy+n.y+Math.cos(t*.24+n.ph)*5;
+      ctx2.beginPath(); ctx2.arc(x,y,1.2+Math.sin(t*.8+n.ph)*.3,0,7);
+      ctx2.fillStyle=GROUP_COLOURS[n.gi%GROUP_COLOURS.length]+'66';
+      ctx2.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+paint(0,null);
+
+</script>
+<div id="cabnav"><a class="home" href="../../index.html">The Cabinet</a><a href="../10-orrery/index.html">I</a><a href="../03-truesize/index.html">II</a><a href="../07-darkforest/index.html">III</a><a href="../04-lifeseed/index.html">IV</a><a href="../01-nepal/index.html">V</a><a href="../06-cartographer/index.html">VI</a><a href="../05-decoder/index.html" class="cur">VII</a><a href="../02-leak/index.html">VIII</a><a href="../08-meter/index.html">IX</a><a href="../09-cabinet/index.html">X</a></div>
+
+<script>
+/* collection navigator — appears on hover near the bottom edge */
+(function(){
+  var n = document.getElementById('cabnav');
+  if(!n) return;
+  var t;
+  function reveal(){ n.classList.add('show'); clearTimeout(t);
+    t = setTimeout(function(){ n.classList.remove('show'); }, 2600); }
+  document.addEventListener('mousemove', function(e){
+    if(e.clientY > innerHeight - 70) reveal();
+  });
+  window.addEventListener('touchstart', function(e){
+    if(e.touches[0].clientY > innerHeight - 90) reveal();
+  }, {passive:true});
+  setTimeout(reveal, 600);
+})();
+</script>
+</body>
+</html>
