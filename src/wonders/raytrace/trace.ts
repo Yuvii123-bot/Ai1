@@ -245,6 +245,10 @@ function fresnelDielectric(cosI: number, ior: number) {
  * ------------------------------------------------------------------ */
 export function renderTile(opts: RenderOpts): Float32Array {
   const { width, height, rowStart, rowEnd, samplesPerPixel, maxBounces, camera, scene } = opts;
+  // A missing sampleOffset/seed must not collapse every sample onto the same
+  // random stream (which silently makes extra samples useless).
+  const sampleOffset = Number.isFinite(opts.sampleOffset) ? opts.sampleOffset : 0;
+  const seed = Number.isFinite(opts.seed) ? opts.seed : 1;
   const rows = rowEnd - rowStart;
   const out = new Float32Array(rows * width * 3);
 
@@ -262,8 +266,8 @@ export function renderTile(opts: RenderOpts): Float32Array {
       let R = 0, G = 0, B = 0;
 
       for (let s = 0; s < samplesPerPixel; s++) {
-        const si = opts.sampleOffset + s;
-        const rand = rng(((y * 73856093) ^ (x * 19349663) ^ (si * 83492791) ^ opts.seed) >>> 0);
+        const si = sampleOffset + s;
+        const rand = rng(((y * 73856093) ^ (x * 19349663) ^ (si * 83492791) ^ seed) >>> 0);
 
         const jx = (x + rand()) * px;
         const jy = (y + rand()) * py;

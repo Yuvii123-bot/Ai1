@@ -64,25 +64,31 @@ export function buildScene(id: SceneId): Scene {
     objs.push({ t: 'p', n: [0, 0, 1], d: 2.6, mat: mat({ albedo: [0.75, 0.75, 0.75], rough: 0.9 }) });
     objs.push({ t: 's', c: [-0.55, 0.62, 0.55], r: 0.6, mat: mat({ albedo: [0.85, 0.86, 0.9], rough: 0.06, metal: 0.9 }) });
     objs.push({ t: 'b', min: [0.3, 0, 0.25], max: [1.2, 1.25, 1.15], mat: mat({ albedo: [0.74, 0.74, 0.72], rough: 0.85 }) });
-    objs.push({ t: 's', c: [0, 2.75, 0.5], r: 0.85, mat: mat({ emissive: [9, 8.2, 6.6], albedo: [1, 1, 1], rough: 1 }) });
-    light = { c: [0, 2.75, 0.5], r: 0.85 };
+    // A compact, powerful emitter: a big dim one fills the box with ambient
+    // and erases the shadow that makes this benchmark famous.
+    objs.push({ t: 's', c: [0, 2.75, 0.5], r: 0.42, mat: mat({ emissive: [46, 42, 34], albedo: [1, 1, 1], rough: 1 }) });
+    light = { c: [0, 2.75, 0.5], r: 0.42 };
     sky = { top: [0, 0, 0], bottom: [0, 0, 0], sun: [0, 1, 0], sunPower: 0 };
-    exposure = 1.6;
+    // The box is a closed oven: most light is indirect, so it needs a low
+    // exposure or the grey walls clip to white and the falloff disappears.
+    exposure = 0.62;
   }
 
   if (id === 'mirror') {
     objs.length = 0;
     objs.push({ t: 'p', n: [0, 1, 0], d: 0, mat: mat({ albedo: [0.35, 0.36, 0.42], rough: 0.3, metal: 0.8 }) });
-    // two large mirrors facing each other -> infinite reflections
-    objs.push({ t: 'p', n: [0, 0, 1], d: -3.4, mat: mat({ albedo: [0.96, 0.97, 1.0], rough: 0.01, metal: 1 }) });
-    objs.push({ t: 'p', n: [0, 0, -1], d: 6.4, mat: mat({ albedo: [0.96, 0.97, 1.0], rough: 0.01, metal: 1 }) });
+    // Two large mirrors facing each other -> infinite reflections. Both must
+    // sit BEHIND the camera (z = -5.2), otherwise the near one fills the frame
+    // with a reflection of the void and the scene renders black.
+    objs.push({ t: 'p', n: [0, 0, 1], d: 7.4, mat: mat({ albedo: [0.96, 0.97, 1.0], rough: 0.01, metal: 1 }) });
+    objs.push({ t: 'p', n: [0, 0, -1], d: -6.0, mat: mat({ albedo: [0.96, 0.97, 1.0], rough: 0.01, metal: 1 }) });
     objs.push({ t: 's', c: [0, 1.15, 1.5], r: 1.1, mat: mat({ albedo: [0.9, 0.55, 0.95], metal: 0.2, rough: 0.06, ior: 1.45 }) });
     objs.push({ t: 's', c: [-1.6, 0.45, 0.2], r: 0.45, mat: mat({ albedo: [0.9, 0.75, 0.3], metal: 1, rough: 0.15 }) });
     objs.push({ t: 's', c: [1.55, 0.4, -0.6], r: 0.4, mat: mat({ albedo: [0.25, 0.7, 1], metal: 1, rough: 0.05 }) });
     objs.push({ t: 's', c: [0.2, 4.2, 1.4], r: 1.2, mat: mat({ emissive: [7, 7.5, 10], rough: 1 }) });
     light = { c: [0.2, 4.2, 1.4], r: 1.2 };
     sky = { top: [0.03, 0.03, 0.07], bottom: [0.1, 0.09, 0.16], sun: [0, 1, 0], sunPower: 0 };
-    exposure = 1.2;
+    exposure = 1.0;
   }
 
   if (id === 'planet') {
@@ -125,7 +131,7 @@ export type CameraPreset = {
 };
 
 export const CAMERAS: CameraPreset[] = [
-  { id: 'hero', name: 'Hero', pos: [0, 1.7, -5.2], target: [0, 0.85, 0.8], fov: 40 },
+  { id: 'hero', name: 'Hero', pos: [0, 1.95, -5.4], target: [0, 0.9, 0.8], fov: 40 },
   { id: 'low', name: 'Low', pos: [-2.2, 0.55, -4.0], target: [0.2, 0.9, 1.0], fov: 48 },
   { id: 'top', name: 'Overhead', pos: [0.4, 5.2, -3.4], target: [0, 0.5, 0.8], fov: 42 },
   { id: 'macro', name: 'Macro', pos: [-0.9, 0.9, -2.0], target: [0, 0.8, 0.9], fov: 30 },

@@ -21,6 +21,7 @@
  */
 
 export type Mask = Uint8Array;
+export type Pt = { x: number; y: number };
 
 export function makeMask(n: number): Mask {
   return new Uint8Array(n);
@@ -65,6 +66,100 @@ export function distanceTransform(mask: Mask, w: number, h: number) {
  * Fills the hole from the outside in, weighting known neighbours by a
  * combination of distance and directional gradient coherence.
  */
+
+/* ---------------- harmonic (Laplace) inpainting ---------------- */
+
+function jacobi(img: Uint8ClampedArray, mask: Uint8Array, w: number, h: number, iters: number) {
+  let cur = new Uint8ClampedArray(img);
+  let nxt = new Uint8ClampedArray(img);
+  for (let it = 0; it < iters; it++) {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        if (!mask[i]) {
+          nxt[i * 4] = cur[i * 4]; nxt[i * 4 + 1] = cur[i * 4 + 1]; nxt[i * 4 + 2] = cur[i * 4 + 2];
+          nxt[i * 4 + 3] = 255; continue;
+        }
+        const xl = x > 0 ? i - 1 : i, xr = x < w - 1 ? i + 1 : i;
+        const yu = y > 0 ? i - w : i, yd = y < h - 1 ? i + w : i;
+        for (let c = 0; c < 3; c++) {
+          nxt[i * 4 + c] = (cur[xl * 4 + c] + cur[xr * 4 + c] + cur[yu * 4 + c] + cur[yd * 4 + c]) * 0.25;
+        }
+        nxt[i * 4 + 3] = 255;
+      }
+    }
+    const t = cur; cur = nxt; nxt = t;
+  }
+  return cur;
+}
+
+function downsample(img: Uint8ClampedArray, mask: Uint8Array, w: number, h: number) {
+  const nw = Math.max(1, w >> 1), nh = Math.max(1, h >> 1);
+  const o = new Uint8ClampedArray(nw * nh * 4);
+  const m = new Uint8Array(nw * nh);
+  for (let y = 0; y < nh; y++) {
+    for (let x = 0; x < nw; x++) {
+      let r = 0, g = 0, b = 0, k = 0, holes = 0, tot = 0;
+      for (let dy = 0; dy < 2; dy++) {
+        for (let dx = 0; dx < 2; dx++) {
+          const sx = Math.min(w - 1, x * 2 + dx), sy = Math.min(h - 1, y * 2 + dy);
+          const si = sy * w + sx;
+          tot++;
+          if (mask[si]) holes++;
+          else { r += img[si * 4]; g += img[si * 4 + 1]; b += img[si * 4 + 2]; k++; }
+        }
+      }
+      const di = y * nw + x;
+      if (k > 0) { o[di * 4] = r / k; o[di * 4 + 1] = g / k; o[di * 4 + 2] = b / k; }
+      o[di * 4 + 3] = 255;
+      // only a cell whose children are ALL holes stays a hole, so the known
+      // boundary survives the downsample and pins the coarse solve
+      m[di] = holes === tot ? 1 : 0;
+    }
+  }
+  return { img: o, mask: m, w: nw, h: nh };
+}
+
+/**
+ * Coarse-to-fine Laplace solve. Jacobi converges in O(n^2) sweeps, so a 170-px
+ * hole needs thousands of passes at full resolution; solving on a pyramid and
+ * interpolating each level's result down converges in a fraction of the cost.
+ */
+export function harmonicFill(out: Uint8ClampedArray, mask: Uint8Array, w: number, h: number) {
+  type Level = { img: Uint8ClampedArray; mask: Uint8Array; w: number; h: number };
+  const levels: Level[] = [{ img: out, mask, w, h }];
+  while (levels.length < 7) {
+    const L = levels[levels.length - 1];
+    if (L.w <= 12 || L.h <= 12) break;
+    levels.push(downsample(L.img, L.mask, L.w, L.h));
+  }
+  let L = levels.pop()!;
+  let sol = jacobi(L.img, L.mask, L.w, L.h, 500);
+  while (levels.length) {
+    const F = levels.pop()!;
+    const sx = L.w / F.w, sy = L.h / F.h;
+    for (let y = 0; y < F.h; y++) {
+      for (let x = 0; x < F.w; x++) {
+        const i = y * F.w + x;
+        if (!F.mask[i]) continue;
+        const fx = (x + 0.5) * sx - 0.5, fy = (y + 0.5) * sy - 0.5;
+        const x0 = Math.max(0, Math.min(L.w - 1, Math.floor(fx)));
+        const y0 = Math.max(0, Math.min(L.h - 1, Math.floor(fy)));
+        const x1 = Math.min(L.w - 1, x0 + 1), y1 = Math.min(L.h - 1, y0 + 1);
+        const tx = Math.min(1, Math.max(0, fx - x0)), ty = Math.min(1, Math.max(0, fy - y0));
+        for (let c = 0; c < 3; c++) {
+          const a = sol[(y0 * L.w + x0) * 4 + c], b = sol[(y0 * L.w + x1) * 4 + c];
+          const cc = sol[(y1 * L.w + x0) * 4 + c], d = sol[(y1 * L.w + x1) * 4 + c];
+          F.img[i * 4 + c] = (a * (1 - tx) + b * tx) * (1 - ty) + (cc * (1 - tx) + d * tx) * ty;
+        }
+      }
+    }
+    sol = jacobi(F.img, F.mask, F.w, F.h, 50);
+    L = F;
+  }
+  out.set(sol);
+}
+
 export function structureFill(
   rgba: Uint8ClampedArray,
   mask: Mask,
@@ -73,62 +168,107 @@ export function structureFill(
 ): Uint8ClampedArray {
   const out = new Uint8ClampedArray(rgba);
   const dist = distanceTransform(mask, w, h);
-  // order pixels by distance (inside-out = far from boundary first)
+
+  // Fill from the boundary inwards. Ordering by ASCENDING distance means every
+  // pixel is processed only once it has at least one already-known neighbour;
+  // filling centre-first leaves the middle with nothing to average and produces
+  // the classic black blob.
   const order: number[] = [];
   for (let i = 0; i < w * h; i++) if (mask[i]) order.push(i);
-  order.sort((a, b) => dist[b] - dist[a]);
+  order.sort((a, b) => dist[a] - dist[b]);
 
   const filled = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) filled[i] = mask[i] ? 0 : 1;
 
-  const radius = 6;
-  for (const idx of order) {
-    const x = idx % w;
-    const y = (idx / w) | 0;
-    let sr = 0, sg = 0, sb = 0, wsum = 0;
-    // gather known (or already-filled) neighbours in a disc
-    for (let dy = -radius; dy <= radius; dy++) {
-      const yy = y + dy;
-      if (yy < 0 || yy >= h) continue;
-      for (let dx = -radius; dx <= radius; dx++) {
-        const xx = x + dx;
-        if (xx < 0 || xx >= w) continue;
-        if (dx === 0 && dy === 0) continue;
-        const j = yy * w + xx;
-        if (!filled[j]) continue;
-        const dd = Math.hypot(dx, dy);
-        if (dd > radius) continue;
-        // direction weight: prefer neighbours along the local isophote
-        const gradX = (rgba[(j + 1) * 4] - rgba[(j - 1) * 4]) || 0;
-        const gradY = (rgba[(j + w) * 4] - rgba[(j - w) * 4]) || 0;
-        const gmag = Math.hypot(gradX, gradY) + 1e-3;
-        // tangential direction
-        const tx = -gradY / gmag, ty = gradX / gmag;
-        const along = Math.abs((dx * tx + dy * ty) / dd);
-        const weight = (1 / (dd * dd + 1e-4)) * (0.35 + 0.65 * along);
-        sr += rgba[j * 4] * weight;
-        sg += rgba[j * 4 + 1] * weight;
-        sb += rgba[j * 4 + 2] * weight;
-        wsum += weight;
+  const radius = 7;
+
+  // Multi-pass: pixels with no known neighbour are deferred, not abandoned.
+  let remaining = order.length;
+  let pass = 0;
+  const deferred: number[] = [];
+  while (remaining > 0 && pass < 64) {
+    deferred.length = 0;
+    for (const idx of order) {
+      if (filled[idx]) continue;
+      const x = idx % w;
+      const y = (idx / w) | 0;
+      let sr = 0, sg = 0, sb = 0, wsum = 0;
+      for (let dy = -radius; dy <= radius; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) continue;
+        for (let dx = -radius; dx <= radius; dx++) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= w) continue;
+          if (dx === 0 && dy === 0) continue;
+          const dd = Math.hypot(dx, dy);
+          if (dd > radius) continue;
+          const j = yy * w + xx;
+          if (!filled[j]) continue;
+          // direction weight: prefer neighbours along the local isophote, so
+          // an edge continues through the hole instead of blurring across it
+          const jr = Math.min(w - 1, xx + 1) + yy * w;
+          const jl = Math.max(0, xx - 1) + yy * w;
+          const jd = xx + Math.min(h - 1, yy + 1) * w;
+          const ju = xx + Math.max(0, yy - 1) * w;
+          const gradX = out[jr * 4] - out[jl * 4];
+          const gradY = out[jd * 4] - out[ju * 4];
+          const gmag = Math.hypot(gradX, gradY) + 1e-3;
+          const tx = -gradY / gmag, ty = gradX / gmag;
+          const along = Math.abs((dx * tx + dy * ty) / dd);
+          const weight = (1 / (dd * dd + 1e-4)) * (0.45 + 0.55 * along);
+          sr += out[j * 4] * weight;
+          sg += out[j * 4 + 1] * weight;
+          sb += out[j * 4 + 2] * weight;
+          wsum += weight;
+        }
+      }
+      if (wsum > 0) {
+        out[idx * 4] = sr / wsum;
+        out[idx * 4 + 1] = sg / wsum;
+        out[idx * 4 + 2] = sb / wsum;
+        out[idx * 4 + 3] = 255;
+        filled[idx] = 1;
+        remaining--;
+      } else {
+        deferred.push(idx);
       }
     }
-    if (wsum > 0) {
-      out[idx * 4] = sr / wsum;
-      out[idx * 4 + 1] = sg / wsum;
-      out[idx * 4 + 2] = sb / wsum;
+    if (deferred.length === 0) break;
+    pass++;
+    if (deferred.length === remaining) break; // no progress possible this pass
+  }
+
+  // ---- diffusion refinement ------------------------------------------------
+  // The greedy pass grows inwards from the boundary, so where two fronts meet
+  // it leaves a visible seam (typically an X across a rectangular hole).
+  // Solving the Laplace equation with the known pixels pinned as Dirichlet
+  // boundary conditions gives the smooth "rubber sheet" interpolation that
+  // removes it — the same thing Photoshop's content-aware fill approximates.
+  // Solving the Laplace equation with the known pixels pinned as Dirichlet
+  // boundary conditions gives the smooth "rubber sheet" interpolation that
+  // removes the greedy fill's seam — the thing Photoshop's content-aware fill
+  // approximates at the low frequencies.
+  if (order.length > 0) harmonicFill(out, mask, w, h);
+
+  // Anything still empty (a hole wider than the search radius, or a mask that
+  // touches the whole frame): fall back to the mean of the known boundary so
+  // the result is never black.
+  if (remaining > 0) {
+    let sr = 0, sg = 0, sb = 0, n = 0;
+    for (let i = 0; i < w * h; i++) {
+      if (mask[i]) continue;
+      sr += rgba[i * 4]; sg += rgba[i * 4 + 1]; sb += rgba[i * 4 + 2]; n++;
     }
-    out[idx * 4 + 3] = 255;
-    filled[idx] = 1;
+    if (n > 0) { sr /= n; sg /= n; sb /= n; }
+    for (let i = 0; i < w * h; i++) {
+      if (!mask[i] || filled[i]) continue;
+      out[i * 4] = sr; out[i * 4 + 1] = sg; out[i * 4 + 2] = sb; out[i * 4 + 3] = 255;
+      filled[i] = 1;
+    }
   }
   return out;
 }
 
-type Pt = { x: number; y: number };
-
-/**
- * Stage 2 — Criminisi-style exemplar synthesis with a priority front.
- * Copies whole patches, so texture statistics survive.
- */
 export function exemplarSynthesis(
   rgba: Uint8ClampedArray,
   mask: Mask,
@@ -392,6 +532,71 @@ export function dilate(mask: Mask, w: number, h: number, n = 2): Mask {
   return m;
 }
 
+
+/**
+ * Recombine a smooth (harmonic) fill with a textured (exemplar) fill using the
+ * local texture energy of the textured candidate. Low-variance neighbourhoods
+ * (sky, flat wall) take the smooth result; high-variance ones (sand, foliage)
+ * keep the synthesised texture.
+ */
+function textureBlend(
+  smooth: Uint8ClampedArray,
+  textured: Uint8ClampedArray,
+  mask: Mask,
+  w: number,
+  h: number
+) {
+  const out = new Uint8ClampedArray(textured);
+  // Denoise the candidate first: single-pixel exemplar grain is noise, not
+  // texture. What we want to carry over is the *structure* (sand ripples,
+  // foliage clumps), so measure and transfer the 3x3 mean instead.
+  const blur = new Uint8ClampedArray(textured);
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      for (let c = 0; c < 3; c++) {
+        blur[i * 4 + c] = (
+          textured[(i - w - 1) * 4 + c] + textured[(i - w) * 4 + c] + textured[(i - w + 1) * 4 + c] +
+          textured[(i - 1) * 4 + c] + textured[i * 4 + c] + textured[(i + 1) * 4 + c] +
+          textured[(i + w - 1) * 4 + c] + textured[(i + w) * 4 + c] + textured[(i + w + 1) * 4 + c]
+        ) / 9;
+      }
+    }
+  }
+  const R = 4;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (!mask[i]) continue;
+      let n = 0, sum = 0, sum2 = 0;
+      for (let dy = -R; dy <= R; dy += 2) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= h) continue;
+        for (let dx = -R; dx <= R; dx += 2) {
+          const xx = x + dx;
+          if (xx < 0 || xx >= w) continue;
+          const j = yy * w + xx;
+          const l = 0.299 * blur[j * 4] + 0.587 * blur[j * 4 + 1] + 0.114 * blur[j * 4 + 2];
+          sum += l; sum2 += l * l; n++;
+        }
+      }
+      const mean = sum / Math.max(1, n);
+      const sd = Math.sqrt(Math.max(0, sum2 / Math.max(1, n) - mean * mean));
+      // Only carry texture where the neighbourhood has real structure, and
+      // never let copied pixels fully replace the diffusion result: on a large
+      // hole the exemplar field is patchwork, so it contributes structure while
+      // the harmonic solve stays in charge of the low frequencies.
+      let t = (sd - 6) / 12;
+      t = t < 0 ? 0 : t > 1 ? 1 : t;
+      t = t * t * (3 - 2 * t) * 0.55;
+      for (let c = 0; c < 3; c++) {
+        out[i * 4 + c] = smooth[i * 4 + c] * (1 - t) + blur[i * 4 + c] * t;
+      }
+    }
+  }
+  return out;
+}
+
 export function inpaint(
   rgba: Uint8ClampedArray,
   mask: Mask,
@@ -406,10 +611,15 @@ export function inpaint(
   } else if (opts.method === 'exemplar') {
     result = exemplarSynthesis(rgba, mask, w, h, opts.patch, 90, opts.onProgress);
   } else {
-    const stage1 = structureFill(rgba, mask, w, h);
-    opts.onProgress?.(0.25);
-    result = exemplarSynthesis(stage1, mask, w, h, opts.patch, 80, (p) => opts.onProgress?.(0.25 + p * 0.5), stage1);
-    opts.onProgress?.(0.8);
+    // Hybrid: harmonic solve for the low frequencies, exemplar synthesis for
+    // texture, recombined by local texture energy. Smooth regions (sky, walls)
+    // take the diffusion result so they stay clean; busy regions (sand, grass,
+    // fabric) keep the copied texture instead of smearing it.
+    const base = structureFill(rgba, mask, w, h);
+    opts.onProgress?.(0.3);
+    const textured = exemplarSynthesis(base, mask, w, h, opts.patch, 80, (p) => opts.onProgress?.(0.3 + p * 0.5), base);
+    opts.onProgress?.(0.82);
+    result = textureBlend(base, textured, mask, w, h);
   }
   if (opts.blend) {
     result = featherBlend(rgba, result, mask, w, h, 2);
