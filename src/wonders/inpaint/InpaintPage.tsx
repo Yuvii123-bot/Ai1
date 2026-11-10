@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented, Toggle } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import { inpaint, dilate, Mask } from './inpaint';
 
-const W = wonderBySlug('inpaint')!;
+const W = WONDER_META.find((w) => w.slug === 'inpaint')!;
 
 const SAMPLES = [
   { id: 'beach', name: 'Beach', src: '/samples/beach.jpg', hint: 'Remove the umbrella' },

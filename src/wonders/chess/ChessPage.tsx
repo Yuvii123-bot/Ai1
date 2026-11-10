@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import {
   Game, Move, Search, newGame, generateMoves, makeMove, sqName, inCheck, toFen, kingSquare,
-  generateMoves as gen, Move as M, uciToMove, gameFromFen, MATE,
+  gameFromFen, MATE, cloneGame,
 } from './engine';
 
-const W = wonderBySlug('chess')!;
+const W = WONDER_META.find((w) => w.slug === 'chess')!;
 
 const GLYPH: Record<string, string> = {
   wk: '♔', wq: '♕', wr: '♖', wb: '♗', wn: '♘', wp: '♙',
@@ -38,19 +38,24 @@ function sanFor(g: Game, m: Move, legal: Move[]): string {
   if (m.captured) san += 'x';
   san += sqName(m.to);
   if (m.promo) san += '=' + m.promo.toUpperCase();
-  // check / mate
-  const u = makeMove(g, m);
-  const opp = g.color;
-  const oppMoves = generateMoves(g);
-  const isCheck = inCheck(g, opp);
-  if (isCheck) san += oppMoves.length === 0 ? '#' : '+';
-  void u;
+  // check / mate — work on a throwaway copy; callers pass the live position
+  const probe = cloneGame(g);
+  makeMove(probe, m);
+  const opp = probe.color;
+  const oppMoves = generateMoves(probe);
+  if (inCheck(probe, opp)) san += oppMoves.length === 0 ? '#' : '+';
   return san;
 }
 
+type ChessState = { game: Game; history: HistoryEntry[] };
+
 export default function ChessPage() {
-  const [game, setGame] = useState<Game>(() => newGame());
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  // One immutable state object for the whole game tree. Keeping game+history in
+  // a single state means an update never mutates a live object that effects or
+  // event handlers still hold a reference to.
+  const [state, setState] = useState<ChessState>(() => ({ game: newGame(), history: [] }));
+  const game = state.game;
+  const history = state.history;
   const [selected, setSelected] = useState<number | null>(null);
   const [playerColor, setPlayerColor] = useState<'w' | 'b'>('w');
   const [strength, setStrength] = useState(4);
@@ -69,34 +74,36 @@ export default function ChessPage() {
   const checkSq = inCheck(game, game.color) ? kingSquare(game, game.color) : -1;
   const over = moves.length === 0;
 
-  const applyMove = useCallback(
-    (m: Move) => {
-      const legal = generateMoves(game);
-      const san = sanFor(game, m, legal);
-      const u = makeMove(game, m);
-      void u;
-      setHistory((h) => [...h, { move: m, san, fen: toFen(game), uci: sqName(m.from) + sqName(m.to) + (m.promo ?? '') }]);
-      setGame({ ...game });
-      setLastMove({ from: m.from, to: m.to });
-      setSelected(null);
-      // status
-      const nextMoves = generateMoves(game);
-      const side = game.color;
+  const applyMove = useCallback((m: Move) => {
+    setState((prev) => {
+      const g = cloneGame(prev.game);
+      const legal = generateMoves(g);
+      const san = sanFor(g, m, legal);
+      makeMove(g, m);
+      const nextMoves = generateMoves(g);
+      const side = g.color;
       if (nextMoves.length === 0) {
-        setStatus(inCheck(game, side) ? `${side === 'w' ? 'Black' : 'White'} wins by checkmate` : 'Draw by stalemate');
-      } else if (inCheck(game, side)) {
+        setStatus(inCheck(g, side) ? `${side === 'w' ? 'Black' : 'White'} wins by checkmate` : 'Draw by stalemate');
+      } else if (inCheck(g, side)) {
         setStatus(`${side === 'w' ? 'White' : 'Black'} is in check`);
       } else {
         setStatus('');
       }
-    },
-    [game]
-  );
+      setLastMove({ from: m.from, to: m.to });
+      setSelected(null);
+      return {
+        game: g,
+        history: [...prev.history, { move: m, san, fen: toFen(g), uci: sqName(m.from) + sqName(m.to) + (m.promo ?? '') }],
+      };
+    });
+  }, []);
 
   /* ---------------- engine turn ---------------- */
+  const engineBusy = useRef(false);
   useEffect(() => {
-    if (over || game.color === playerColor) return;
+    if (over || game.color === playerColor || engineBusy.current) return;
     let cancelled = false;
+    engineBusy.current = true;
     setThinking(true);
     setThinkingLog([]);
     const s = new Search();
@@ -112,16 +119,18 @@ export default function ChessPage() {
       });
     };
     const timer = setTimeout(() => {
-      const res = s.think(game, Math.max(2, strength), 250 + strength * 550);
+      const res = s.think(game, Math.max(2, strength), 200 + strength * 420);
       if (cancelled) return;
       setThinking(false);
       setAnalysis(res);
+      engineBusy.current = false;
       if (res.best) applyMove(res.best);
-    }, 260);
+    }, 120);
     return () => {
       cancelled = true;
       s.stopped = true;
       clearTimeout(timer);
+      engineBusy.current = false;
       setThinking(false);
     };
   }, [game, playerColor, strength, over, applyMove]);
@@ -148,13 +157,13 @@ export default function ChessPage() {
   const legalTargets = selected !== null ? moves.filter((m) => m.from === selected).map((m) => m.to) : [];
   const newGameClick = (color: 'w' | 'b') => {
     setPlayerColor(color);
-    setGame(newGame());
-    setHistory([]);
+    setState({ game: newGame(), history: [] });
     setSelected(null);
     setLastMove(null);
     setStatus('');
     setAnalysis(null);
     setThinkingLog([]);
+    engineBusy.current = false;
   };
 
   const undo = () => {
@@ -164,11 +173,11 @@ export default function ChessPage() {
     const target = history[history.length - back];
     if (!target) return;
     const g = gameFromFen(target.fen);
-    setGame(g);
-    setHistory(history.slice(0, history.length - back));
+    setState({ game: g, history: history.slice(0, history.length - back) });
     setLastMove(null);
     setSelected(null);
     setStatus('');
+    engineBusy.current = false;
   };
 
   const evalBar = useMemo(() => {

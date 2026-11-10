@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import {
   generateDataset, scoreDataset, evaluateModel, moneySaved, buildGraph, findRings,
   Scored, Dataset, GraphNode, GraphEdge,
 } from './engine';
 import { download } from '../../lib/math';
 
-const W = wonderBySlug('fabric')!;
+const W = WONDER_META.find((w) => w.slug === 'fabric')!;
 
 export default function FabricPage() {
   const [seed, setSeed] = useState(42);

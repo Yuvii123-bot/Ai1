@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import { Scene, Camera, renderTile, tonemap, denoise } from './trace';
 import { SCENES, SceneId, buildScene, CAMERAS } from './scenes';
 import { download } from '../../lib/math';
 
-const W = wonderBySlug('raytrace')!;
+const W = WONDER_META.find((w) => w.slug === 'raytrace')!;
 
 const PRESETS: { id: string; label: string; res: number; spp: number; bounces: number }[] = [
   { id: 'draft', label: 'Draft', res: 0.4, spp: 1, bounces: 4 },

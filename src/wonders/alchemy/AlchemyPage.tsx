@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import {
   parseSmiles, layout, MOLECULES, molecularSpectrum, elementInfo, Molecule,
 } from './chem';
 
-const W = wonderBySlug('alchemy')!;
+const W = WONDER_META.find((w) => w.slug === 'alchemy')!;
 
 export default function AlchemyPage() {
   const [smiles, setSmiles] = useState(MOLECULES[0].smiles);

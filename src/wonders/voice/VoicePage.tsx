@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WonderShell, Slider, Segmented, Stat } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import {
   Note, PRESETS, presetToNotes, synthesize, spectrogram, toWav, noteName, midiFromName,
   VoicePreset, textToSyllables,
 } from './synth';
 import { download } from '../../lib/math';
 
-const W = wonderBySlug('voice')!;
+const W = WONDER_META.find((w) => w.slug === 'voice')!;
 
 const LYRICS_DEFAULT = 'Rise up and shine, the morning is ours';
 

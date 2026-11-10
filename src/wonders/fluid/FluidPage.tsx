@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented, Toggle } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import { FluidSolver, paletteColor } from './solver';
 
-const W = wonderBySlug('fluid')!;
+const W = WONDER_META.find((w) => w.slug === 'fluid')!;
 
 type Mode = 'paint' | 'wind' | 'smoke';
 type Viz = 'dye' | 'speed' | 'vorticity' | 'pressure';

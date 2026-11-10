@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import {
   makeModel, Model, encode, predict, decode, trainStep, mulberry32, makeWorld, stepWorld,
   renderWorld, WorldState, Sample, evaluate, ModelConfig,
 } from './model';
 
-const W = wonderBySlug('world')!;
+const W = WONDER_META.find((w) => w.slug === 'world')!;
 const FS = 22;
 const ACTION = new Float32Array([0.14, 0.14, 0.14, 0.14]);
 

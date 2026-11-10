@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { WonderShell, Slider, Stat, Segmented } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import { compile, polygonise, smoothMesh, toStl, toObj, Mesh } from './sdf';
 import { download } from '../../lib/math';
 
-const W = wonderBySlug('mesh')!;
+const W = WONDER_META.find((w) => w.slug === 'mesh')!;
 
 const EXAMPLES = [
   'a crystal', 'twisted hollow vase', '5-setback tower', 'gear', 'mushroom',
@@ -34,6 +34,7 @@ export default function MeshPage() {
   const [autoRotate, setAutoRotate] = useState(true);
   const [ops, setOps] = useState<string[]>([]);
   const [showEnv, setShowEnv] = useState(true);
+  const [noWebgl, setNoWebgl] = useState(false);
 
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -45,7 +46,16 @@ export default function MeshPage() {
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    // Graceful degradation: if the device has no WebGL (old browser, blocked
+    // GPU, headless), keep the page fully functional — geometry, stats and STL
+    // export all still work — and just show a message where the viewer would be.
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (err) {
+      setNoWebgl(true);
+      return;
+    }
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     renderer.setSize(mount.clientWidth, mount.clientHeight);
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -178,7 +188,7 @@ export default function MeshPage() {
     setText(t);
     setInput(t);
 
-    // swap into the scene
+    // swap into the scene (skipped when WebGL is unavailable)
     const group = groupRef.current;
     if (!group) return;
     if (meshRef.current) {
@@ -233,7 +243,17 @@ export default function MeshPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 320px', gap: 16 }} className="mesh-layout">
         <div className="stack" style={{ gap: 12 }}>
           <div className="panel" style={{ padding: 0, overflow: 'hidden', position: 'relative' }}>
-            <div ref={mountRef} style={{ width: '100%', height: 460, cursor: 'grab' }} />
+            <div ref={mountRef} style={{ width: '100%', height: 460, cursor: 'grab', position: 'relative' }}>
+              {noWebgl && (
+                <div className="center" style={{ position: 'absolute', inset: 0, flexDirection: 'column', gap: 8, padding: 30, textAlign: 'center' }}>
+                  <div style={{ fontSize: 26 }}>⬢</div>
+                  <div style={{ fontSize: 13, color: 'var(--txt-2)', maxWidth: 340 }}>
+                    WebGL isn't available in this browser context, so the 3D viewer is paused.
+                    The geometry pipeline still runs — generate a shape and download the STL.
+                  </div>
+                </div>
+              )}
+            </div>
             <div style={{ position: 'absolute', top: 14, left: 14 }} className="row">
               <span className="chip chip-live"><span className="dot" /> REAL MESH · ${mesh?.triangles.toLocaleString() ?? 0} TRIANGLES</span>
               <span className="chip">{buildMs ? `${buildMs.toFixed(0)} ms` : ''}</span>

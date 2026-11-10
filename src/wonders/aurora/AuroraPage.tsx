@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { WonderShell, Slider, Stat, Segmented, Toggle } from '../../lib/ui';
-import { wonderBySlug } from '../../registry';
+import { WONDER_META } from '../meta';
 import { paint, makePalette, DEFAULT_ART, ArtConfig, toSvg } from './art';
 import { download } from '../../lib/math';
 
-const W = wonderBySlug('aurora')!;
+const W = WONDER_META.find((w) => w.slug === 'aurora')!;
 
 const STYLES: { id: ArtConfig['style']; name: string; desc: string }[] = [
   { id: 'silk', name: 'Silk', desc: 'Long, flowing, luminous ribbons' },

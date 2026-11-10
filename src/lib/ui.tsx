@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { Wonder } from '../registry';
+import type { WonderMeta } from '../wonders/meta';
 
-export function WonderShell({ w, children }: { w: Wonder; children: React.ReactNode }) {
+export function WonderShell({ w, children }: { w: WonderMeta; children: React.ReactNode }) {
   return (
     <div className="fade-in">
       <div className="wrap wp-head">
