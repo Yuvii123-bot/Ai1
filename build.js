@@ -14,7 +14,7 @@ const DIST = path.join(ROOT, 'dist');
 
 /* everything a visitor can reach. .git, dist and node_modules
    are never copied. */
-const INCLUDE = ['index.html', 'assets', 'exhibits', 'data', 'aranya-coffee', 'README.md'];
+const INCLUDE = ['index.html', 'assets', 'exhibits', 'data', 'aranya-coffee', 'concepts', 'README.md'];
 const SKIP = new Set(['.git', 'dist', 'node_modules', '.DS_Store', '.vercel']);
 
 function copy(src, dest) {
@@ -75,6 +75,9 @@ const REQUIRED = [
   'aranya-coffee/index.html',
   'aranya-coffee/assets/app.js',
   'aranya-coffee/assets/style.css',
+  'concepts/index.html',
+  'concepts/fuji-guest-house/index.html',
+  'concepts/advance-paragliding/index.html',
 ];
 
 let missing = 0;
