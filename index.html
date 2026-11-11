@@ -5,51 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>The Cabinet of Ten Wonders</title>
 <meta name="description" content="Ten working wonders, built by an AI in a single sitting. A museum of software you can walk through." />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#0a0b0f" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="The Cabinet of Ten Wonders" />
+<meta property="og:title" content="The Cabinet of Ten Wonders" />
+<meta property="og:description" content="Ten working wonders, built by an AI in a single sitting. A museum of software you can walk through — every exhibit real, runnable and offline." />
+<meta property="og:image" content="assets/hero.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230a0b0f'/><ellipse cx='32' cy='32' rx='22' ry='8.5' fill='none' stroke='%23a98f5c' stroke-width='3' transform='rotate(-22 32 32)'/><circle cx='32' cy='32' r='9.5' fill='none' stroke='%23e8cf9a' stroke-width='3.5'/><circle cx='32' cy='32' r='3' fill='%23e8cf9a'/></svg>" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css" />
+<script src="assets/app.js" defer></script>
 </head>
 <body>
 
-<div class="grain"></div>
-<div class="vignette"></div>
+<a class="skip-link" href="#collection">Skip to the collection</a>
+
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
 
 <!-- ============ LOBBY ============ -->
 <main id="lobby">
   <header class="lobby-head">
-    <div class="eyebrow"><span class="dot"></span> A private collection · assembled 10 November 2026</div>
+    <div class="eyebrow"><span class="dot" aria-hidden="true"></span> A private collection · assembled 10 November 2026</div>
     <h1>The Cabinet<br><em>of Ten Wonders</em></h1>
     <p class="lede">
       Ten working pieces of software, designed and built in a single sitting by an
       artificial intelligence. No mockups. No screenshots. Every exhibit below is
       real, runs in your browser, and does something that did not exist an hour ago.
     </p>
-    <div class="lobby-meta">
+    <div class="lobby-meta" aria-label="Collection statistics">
       <div><b>10</b><span>exhibits</span></div>
       <div><b>0</b><span>dependencies</span></div>
       <div><b>100%</b><span>runnable offline</span></div>
       <div><b id="locCount">—</b><span>lines shipped</span></div>
     </div>
-    <a class="scroll-cue" href="#collection">Enter the collection <span>↓</span></a>
+    <a class="scroll-cue" href="#collection">Enter the collection <span aria-hidden="true">↓</span></a>
   </header>
 
-  <section class="hero-strip">
-    <img src="assets/hero.jpg" alt="A cabinet of curiosities" loading="eager" />
+  <section class="hero-strip" aria-hidden="true">
+    <img src="assets/hero.jpg" alt="" width="1376" height="768" loading="eager" fetchpriority="high" decoding="async" />
     <div class="hero-strip-fade"></div>
   </section>
 
-  <section id="collection" class="collection">
+  <section id="collection" class="collection" aria-labelledby="collectionTitle">
     <div class="section-head">
-      <span class="rule"></span>
-      <h2>The Collection</h2>
-      <span class="rule"></span>
+      <span class="rule" aria-hidden="true"></span>
+      <h2 id="collectionTitle">The Collection</h2>
+      <span class="rule" aria-hidden="true"></span>
     </div>
-    <div class="grid" id="grid"></div>
+    <div class="grid" id="grid" role="list" aria-label="The ten exhibits"></div>
   </section>
 
-  <section class="epilogue">
-    <h2>Why these ten?</h2>
+  <section class="epilogue" aria-labelledby="epilogueTitle">
+    <h2 id="epilogueTitle">Why these ten?</h2>
     <p>
       Because wonder is not one thing. It is a planet you can hold, a language that
       forgot itself, a map that tells a secret, a mirror that knows your future.
@@ -66,17 +78,16 @@
 </main>
 
 <!-- ============ EXHIBIT VIEW ============ -->
-<div id="theatre" hidden>
+<div id="theatre" role="dialog" aria-modal="true" aria-labelledby="tTitle" hidden>
   <div class="theatre-bar">
-    <a class="back" href="#" id="backBtn">← <span>The Collection</span></a>
+    <a class="back" href="#" id="backBtn"><span aria-hidden="true">←</span> <span>The Collection</span></a>
     <div class="theatre-title"><span id="tNum">I</span> · <span id="tTitle"></span></div>
     <div class="theatre-tools">
-      <a id="popout" target="_blank" title="Open this exhibit in its own tab">⤢</a>
+      <a id="popout" href="#" target="_blank" rel="noopener" title="Open this exhibit in its own tab" aria-label="Open this exhibit in its own tab">⤢</a>
     </div>
   </div>
-  <iframe id="stage" title="Exhibit"></iframe>
+  <iframe id="stage" title="Exhibit content"></iframe>
 </div>
 
-<script src="assets/app.js"></script>
 </body>
 </html>

@@ -42,12 +42,36 @@ total 419,633 bytes · 4,621 lines
 ALL INTACT: true
 ```
 
+## Design system — UI/UX Pro Max
+
+Every frontend surface in this repository is built and reviewed with
+[**UI/UX Pro Max**](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)
+(v2.15.0), installed permanently in-repo:
+
+- `.agents/skills/` — Agent Skills standard (Arena.ai Agent Mode, Codex,
+  Antigravity and compatible agents)
+- `.claude/skills/` — Claude Code
+
+The canonical design system produced from it is
+[`docs/design-system.md`](docs/design-system.md) (OLED museum-dark, brass on
+ink, Cormorant / Inter / JetBrains Mono). `AGENTS.md` makes consulting the
+skill mandatory for all future UI work. Query it directly:
+
+```bash
+npm run design:system -- "saas dashboard" --design-system   # new direction
+npm run design:system -- "focus visible keyboard" --domain ux
+```
+
+Update the installed skill with `uipro update --ai universal` and
+`uipro update --ai claude`. The runtime site stays dependency-free; the skill
+is development tooling and is not copied into `dist/`.
+
 ## Built with
 
 Natural Earth 110m country boundaries (public domain) · Bikram Sambat month table
 (BS 2000–2090) · IAU J2000 orbital elements · the Monte-Carlo IoU, Web Mercator,
 Kepler's equation, normalised edit distance and single-linkage clustering, implemented
-from scratch.
+from scratch · [UI/UX Pro Max v2.15.0](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) as the design intelligence for every frontend surface (`.agents/skills/`, `.claude/skills/`, `docs/design-system.md`).
 
 ---
 

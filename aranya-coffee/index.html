@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ARANYA — Himalayan Single-Origin Coffee · Gulmi, Nepal</title>
+<meta name="description" content="Single-origin Nepali coffee from 1,600–1,850 m in Gulmi, Arghakhanchi and Sindhupalchowk. Washed, honey and natural lots, roasted every Sunday in Kathmandu. Reserve a bag for pickup or delivery." />
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#14100d" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ARANYA — Himalayan Roastery" />
+<meta property="og:title" content="ARANYA — Coffee at the edge of the clouds" />
+<meta property="og:description" content="Single-origin Himalayan coffee — washed, honey and natural lots from 412 smallholder farms. Roasted every Sunday. Gulkmi to your cup." />
+<meta property="og:image" content="assets/img/gulmi.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%2314100d'/><path d='M10 42 L24 20 L32 33 L40 24 L54 42 Z' fill='none' stroke='%23c8a24a' stroke-width='3.5' stroke-linejoin='round' stroke-linecap='round'/><circle cx='46' cy='14' r='4.5' fill='%23c8a24a'/></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Montserrat:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css" />
+<script src="assets/app.js" defer></script>
+</head>
+<body>
+
+<a class="skip-link" href="#shop">Skip to the coffees</a>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- ══════════ NAV ══════════ -->
+<header class="nav" id="navBar">
+  <div class="nav-inner">
+    <a class="brand" href="#top" aria-label="ARANYA — home">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><path d="M10 42 L24 20 L32 33 L40 24 L54 42 Z" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="46" cy="14" r="4.6" fill="currentColor"/></svg>
+      <span class="brand-text"><b>ARANYA</b><small>HIMALAYAN ROASTERY</small></span>
+    </a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#shop">Coffees</a>
+      <a href="#origin">Origin</a>
+      <a href="#ritual">Brew ritual</a>
+      <a href="#club">Sunday Club</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-reserve" href="#shop">Reserve a bag</a>
+      <button type="button" class="cart-btn" id="cartBtn" aria-label="Open basket" aria-haspopup="dialog">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 7h12l1.4 13a1.8 1.8 0 0 1-1.8 2H6.4a1.8 1.8 0 0 1-1.8-2L6 7Z"/><path d="M9 10.5V6a3 3 0 0 1 6 0v4.5"/></svg>
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero" aria-labelledby="heroTitle">
+  <img class="hero-img" src="assets/img/hero.jpg" alt="Brass gooseneck kettle pouring hot water through a V60 dripper into a ceramic cup, steam rising, coffee beans scattered on dark walnut wood" width="1408" height="768" fetchpriority="high" decoding="async" />
+  <div class="hero-veil"></div>
+  <div class="hero-inner">
+    <p class="eyebrow"><span class="tick" aria-hidden="true"></span> Single-origin · Gulmi, Nepal · 1,600–1,850 m</p>
+    <h1 id="heroTitle">High altitude.<br><em>Slow roast.</em><br>Honest cup.</h1>
+    <p class="hero-lede">One mountain, three processes, one Sunday a week at the roastery. Washed, honey and natural lots from 412 smallholder farms — sealed within hours of roasting.</p>
+    <div class="hero-ctas">
+      <a class="btn btn-gold" href="#shop">Taste the 2025 harvest<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+      <a class="btn btn-ghost" href="#origin">Where it grows</a>
+    </div>
+    <dl class="hero-meta">
+      <div><dt>Elevation</dt><dd>1,300–1,850 m</dd></div>
+      <div><dt>Roast</dt><dd>Every Sunday</dd></div>
+      <div><dt>Harvest</dt><dd>Oct–Jan, once a year</dd></div>
+      <div><dt>Freshness</dt><dd>Valve-sealed, 6-week shelf</dd></div>
+    </dl>
+  </div>
+  <a class="scroll-cue" href="#shop" aria-hidden="true" tabindex="-1"><span></span>Scroll</a>
+</section>
+
+<!-- ══════════ MARQUEE ══════════ -->
+<div class="marquee" aria-hidden="true"><div class="marquee-track" id="marqueeTrack">GULMI <i>·</i> ARGHA KHANCHI <i>·</i> PALPA <i>·</i> SYANGJA <i>·</i> SINDHUPALCHOWK <i>·</i> WASHED <i>·</i> HONEY <i>·</i> NATURAL <i>·</i> TYPICA <i>·</i> BOURBON <i>·</i>&nbsp;</div></div>
+
+<!-- ══════════ SHOP ══════════ -->
+<section id="shop" class="section shop" aria-labelledby="shopTitle">
+  <div class="section-head">
+    <div>
+      <p class="kicker">01 — The coffees</p>
+      <h2 id="shopTitle">This season&rsquo;s <em>roasts</em></h2>
+    </div>
+    <div class="currency" role="group" aria-label="Currency">
+      <button type="button" class="currency-btn is-active" data-ccy="NPR" aria-pressed="true">Rs</button>
+      <button type="button" class="currency-btn" data-ccy="USD" aria-pressed="false">$</button>
+    </div>
+  </div>
+  <div class="product-grid" id="productGrid"></div>
+  <p class="shop-note">Roasted every Sunday · valve-sealed within 4 hours · free delivery over Rs 2,500 across Nepal</p>
+</section>
+
+<!-- ══════════ ORIGIN ══════════ -->
+<section id="origin" class="section origin" aria-labelledby="originTitle">
+  <figure class="origin-media">
+    <img src="assets/img/gulmi.jpg" alt="Terraced coffee slopes in Gulmi district at dawn, fog rolling between ridges, Himalayan snow peaks on the horizon" width="1408" height="768" loading="lazy" />
+    <figcaption>Gulmi district · 1,720 m · the 2025 harvest, picked cherry-by-cherry</figcaption>
+  </figure>
+  <div class="origin-copy">
+    <p class="kicker">02 — Where it grows</p>
+    <h2 id="originTitle">Mist first,<br><em>altitude second,</em><br>coffee always.</h2>
+    <p>Every ARANYA lot is a single mountainside, not a blend of convenience. In Gulmi and Arghakhanchi, cherry ripens slowly on volcanic-leaning red loam — nearly twelve months from flower to pick. That slowness is the flavour: more sugar, more acid, more character.</p>
+    <p>We buy the entire harvest from 412 smallholder families, pay 38% above the Fairtrade floor, and cup every lot blind before we commit. What doesn&rsquo;t make the cut becomes our staff espresso — brutal honesty, daily.</p>
+    <ul class="origin-stats">
+      <li><b>412</b><span>smallholder farms, paid 38% above Fairtrade floor</span></li>
+      <li><b>11⅓</b><span>months from flower to cherry — one of the slowest cycles on earth</span></li>
+      <li><b>100%</b><span>lot-traced: farm, altitude, process and cup score on every bag</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ══════════ BREW RITUAL ══════════ -->
+<section id="ritual" class="section ritual" aria-labelledby="ritualTitle">
+  <div class="section-head">
+    <div>
+      <p class="kicker">03 — The brew ritual</p>
+      <h2 id="ritualTitle">Dial in <em>your cup</em></h2>
+    </div>
+  </div>
+  <div class="ritual-shell">
+    <div class="ritual-controls">
+      <p class="panel-label" id="methodLabel">Brew method</p>
+      <div class="method-group" role="radiogroup" aria-labelledby="methodLabel" id="methodGroup"></div>
+      <label class="dose-label" for="doseRange">Dose <output id="doseOut" for="doseRange">15 g</output></label>
+      <input type="range" id="doseRange" min="8" max="22" step="0.5" value="15" aria-describedby="doseOut" />
+      <div class="dose-scale" aria-hidden="true"><span>8 g</span><span>22 g</span></div>
+    </div>
+    <div class="recipe-card" role="group" aria-label="Recipe">
+      <div class="recipe-water"><span id="waterLabel">Water</span><b><span id="waterOut">225</span><i id="waterUnit">ml</i></b></div>
+      <dl class="recipe-rows">
+        <div><dt>Temperature</dt><dd id="tempOut">94°C</dd></div>
+        <div><dt>Time</dt><dd id="timeOut">3:00</dd></div>
+        <div><dt>Grind</dt><dd id="grindOut">Medium-fine</dd></div>
+      </dl>
+      <div class="ratio" aria-hidden="true"><span id="ratioOut">1 : 15</span><div class="ratio-track"><div class="ratio-fill" id="ratioFill"></div></div></div>
+      <p class="recipe-tip" id="tipOut">Bloom with 45 ml for 30 s, then pour in slow spirals to 225 g by 1:30.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ SUNDAY CLUB ══════════ -->
+<section id="club" class="section club" aria-labelledby="clubTitle">
+  <p class="kicker">04 — The Sunday Club</p>
+  <h2 id="clubTitle">A bag <em>every Sunday,</em><br>curated by cup score.</h2>
+  <p class="club-lede">Members get the week&rsquo;s best lot roasted to their preference, at below single-bag price — and first refusal on the micro-lots we bottle.</p>
+  <div class="tiers" id="tierGroup" role="radiogroup" aria-label="Choose your plan"></div>
+  <form class="club-form" id="clubForm" novalidate>
+    <div class="field">
+      <label for="clubName">Name</label>
+      <input type="text" id="clubName" name="name" autocomplete="name" required minlength="2" placeholder="Your name" />
+    </div>
+    <div class="field">
+      <label for="clubEmail">Email</label>
+      <input type="email" id="clubEmail" name="email" autocomplete="email" required placeholder="you@example.com" />
+    </div>
+    <button type="submit" class="btn btn-gold">Join the Sunday Club</button>
+  </form>
+  <div class="club-success" id="clubSuccess" role="status" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-6"/></svg>
+    <div><b>Welcome to the Sunday Club.</b><p>Member <span class="mono" id="clubMemberNo">ARY-0000</span> · plan <span id="clubTierOut">Enthusiast</span>. We&rsquo;ll write within 48 hours with your first bag — the one that scored highest on Sunday&rsquo;s table.</p></div>
+  </div>
+</section>
+
+<!-- ══════════ REVIEWS ══════════ -->
+<section class="section reviews" aria-labelledby="reviewsTitle">
+  <div class="review-summary">
+    <b>4.9</b>
+    <div class="stars" aria-label="4.9 out of 5 stars" role="img"></div>
+    <span>128 cupping notes from members &amp; cafés, 2025–26</span>
+  </div>
+  <div class="review-grid" id="reviewGrid"></div>
+</section>
+
+<!-- ══════════ FAQ ══════════ -->
+<section id="faq" class="section faq" aria-labelledby="faqTitle">
+  <p class="kicker">05 — Fine print</p>
+  <h2 id="faqTitle">Before you <em>ask</em></h2>
+  <div class="faq-list" id="faqList"></div>
+</section>
+
+</main>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer class="footer">
+  <div class="footer-word" aria-hidden="true">ARANYA</div>
+  <div class="footer-inner">
+    <div class="f-brand">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true"><path d="M10 42 L24 20 L32 33 L40 24 L54 42 Z" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/><circle cx="46" cy="14" r="4.6" fill="currentColor"/></svg>
+      <p class="f-line">One mountain.<br>Three processes.<br>One Sunday a week.</p>
+      <p class="f-small">ARANYA is a concept roastery — a design &amp; engineering study built with the UI/UX Pro Max skill. The coffees are imaginary; the craft is real.</p>
+    </div>
+    <nav class="f-col" aria-label="Explore">
+      <p class="f-head">Explore</p>
+      <a href="#shop">The coffees</a>
+      <a href="#origin">Origin &amp; farms</a>
+      <a href="#ritual">Brew ritual</a>
+      <a href="#club">Sunday Club</a>
+      <a href="#faq">FAQ &amp; delivery</a>
+    </nav>
+    <div class="f-col">
+      <p class="f-head">Visit the roastery</p>
+      <p>Jhamsikhel Marg, Lalitpur<br>Kathmandu Valley, Nepal</p>
+      <p>Sun–Thu 08:00–17:00<br>Fri cupping · 15:00 · free</p>
+      <p><a href="mailto:hello@aranya.coffee">hello@aranya.coffee</a><br><a href="tel:+97715550182">+977-1-555-0182</a></p>
+    </div>
+    <form class="f-col f-news" id="newsForm" novalidate>
+      <p class="f-head">The Sunday Letter</p>
+      <p>One email on roast day: what we roasted, why, and who picked it.</p>
+      <div class="news-row">
+        <label class="visually-hidden" for="newsEmail">Email address</label>
+        <input type="email" id="newsEmail" placeholder="you@example.com" required aria-label="Email address" />
+        <button type="submit" class="btn btn-mini">Join</button>
+      </div>
+      <p class="news-result" id="newsResult" role="status"></p>
+    </form>
+  </div>
+  <div class="footer-bar">
+    <span>© <span id="year">2026</span> Aranya Roastery Pvt. Ltd.</span>
+    <span class="mono">GULMI · 1,720 M · 85°C FRAGILE → 96°C BOLD</span>
+    <span>Designed with <a href="https://github.com/nextlevelbuilder/ui-ux-pro-max-skill" rel="noopener">UI/UX Pro Max</a></span>
+  </div>
+</footer>
+
+<!-- ══════════ CART DRAWER ══════════ -->
+<div class="cart-drawer" id="cartDrawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" hidden>
+  <div class="cart-panel">
+    <div class="cart-head">
+      <h2 id="cartTitle">Your basket</h2>
+      <button type="button" class="icon-btn" id="cartClose" aria-label="Close basket">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </button>
+    </div>
+    <div class="cart-empty" id="cartEmpty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="12" rx="8.5" ry="5" transform="rotate(-25 12 12)"/><path d="M12 6.2c2.5 2 2.5 9.7 0 11.7"/></svg>
+      <p><b>Nothing here yet.</b><br>Sunday&rsquo;s roast won&rsquo;t wait — the good lots never do.</p>
+      <a class="btn btn-gold" href="#shop" id="emptyBrowse">Browse the coffees</a>
+    </div>
+    <ul class="cart-items" id="cartItems"></ul>
+    <div class="cart-summary" id="cartSummary" hidden>
+      <div class="sum-row"><span>Subtotal</span><span id="sumSubtotal">Rs 0</span></div>
+      <div class="sum-row"><span>Delivery</span><span id="sumDelivery">Rs 150</span></div>
+      <div class="sum-row sum-total"><span>Total</span><span id="sumTotal">Rs 0</span></div>
+      <button type="button" class="btn btn-gold btn-wide" id="reserveBtn">Reserve for pickup / delivery</button>
+      <p class="pay-note">Pay at pickup — eSewa, Khalti, card or cash. We confirm every reservation within 24 h.</p>
+    </div>
+  </div>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- ══════════ RESERVE MODAL ══════════ -->
+<div class="modal" id="reserveModal" role="dialog" aria-modal="true" aria-labelledby="resTitle" hidden>
+  <div class="modal-card">
+    <svg class="modal-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 5-6"/></svg>
+    <h2 id="resTitle">Reservation received</h2>
+    <p class="res-ref mono" id="resRef">ARY-000000</p>
+    <p id="resDetail">3 bags · Rs 3,150</p>
+    <p class="res-note">We&rsquo;ll hold your bags at the roastery, Jhamsikhel. Expect a confirmation call or email within 24 hours — after that, payment happens at pickup or on delivery.</p>
+    <button type="button" class="btn btn-gold btn-wide" id="resDone">Done</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+</body>
+</html>
