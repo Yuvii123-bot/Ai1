@@ -5,8 +5,15 @@
   "description": "Ten working pieces of software, built in a single sitting. Static, dependency-free.",
   "scripts": {
     "build": "node build.js",
-    "dev": "python3 -m http.server 8080 --bind 0.0.0.0"
+    "dev": "python3 -m http.server 8080 --bind 0.0.0.0",
+    "design:system": "node scripts/design-system.mjs"
   },
-  "keywords": ["static", "canvas", "simulation", "devanagari", "vercel"],
+  "keywords": [
+    "static",
+    "canvas",
+    "simulation",
+    "devanagari",
+    "vercel"
+  ],
   "license": "MIT"
 }
